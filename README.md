@@ -1,5 +1,9 @@
 # DeepSeek Balance Widget
 
+> DeepSeek 余额 & ChatGPT Plus 用量监控桌面悬浮窗 · 支持 Windows 11 与 macOS · 基于 .NET 8
+>
+> _DeepSeek balance & ChatGPT Plus usage monitor — a desktop widget for Windows 11 and macOS._
+
 一个面向 Windows 11 与 macOS 的 DeepSeek API 余额与 ChatGPT Plus 用量监控小工具。它支持余额轮询、Plus 剩余额度、开机自启和异常状态提示；Windows 版本另提供贴边自动隐藏、迷你胶囊和系统托盘。
 
 这是一个面向中文用户的桌面工具。Windows 界面基于 WPF，macOS 界面基于 Avalonia，二者共用余额与用量读取逻辑。下面的标签是 GitHub 使用的技术分类，中文含义见[标签说明](#标签说明)。
@@ -58,15 +62,32 @@ bash scripts/install-macos.sh arm64
 
 ## 主要功能
 
-- 实时显示 DeepSeek API 总余额、充值余额和有效赠送余额
-- 显示与上一次成功刷新的金额和百分比变化
-- 通过本机 Codex 登录状态持续显示 ChatGPT Plus 用量窗口、剩余额度和重置时间
+- 实时显示 DeepSeek API 总余额、充值余额和有效赠送余额，并显示与上一次成功刷新的金额和百分比变化
+- 通过本机 Codex 登录状态持续显示 **ChatGPT Plus 用量**：以对齐表格呈现两个账号的 5 小时滚动窗口与周窗口剩余额度、重置倒计时（v0.4.0 起逐列对齐）
+- **迷你胶囊单行宽布局**（v0.4.0）：DeepSeek 余额｜GPT 双账号四列对齐｜WorkBuddy 占位，贴边按钮固定最右
+- **胶囊区块顺序自定义**（v0.4.0）：设置内上移/下移调整 DeepSeek / ChatGPT / WorkBuddy / tE 的渲染顺序，保存即生效
 - 低余额及异常下降提醒，带冷却机制避免重复打扰
 - Windows 版提供完整卡片与迷你胶囊模式，可自由拖动、记忆位置，并可选贴边自动隐藏
 - macOS 版在菜单栏实时显示余额、Plus 用量百分比和高峰时段指示
-- 系统托盘/菜单栏状态、置顶、隐藏、开机自启
-- 按北京时间显示官方峰值时段参考
+- 系统托盘/菜单栏状态、置顶、隐藏、开机自启；按北京时间显示官方峰值时段参考
 - Windows 版 API Key 使用 DPAPI CurrentUser 加密保存；macOS 版存入登录钥匙串
+
+## v0.4.0 更新亮点
+
+- **ChatGPT 用量对齐表格**：双账号上下两行、五列逐列对齐，每行含剩余百分比与重置倒计时
+- **迷你胶囊单行宽布局**：DeepSeek 余额｜GPT 双账号四列对齐｜WorkBuddy 占位，贴边按钮固定最右
+- **胶囊区块顺序自定义**：设置内上移/下移调整渲染顺序，保存即生效
+
+<details>
+<summary>查看界面对照（调整前 / 调整后）</summary>
+
+| 调整前 | 调整后 |
+| --- | --- |
+| <img src="artifacts/ui-audit/01-before.png" width="320"> | <img src="artifacts/ui-audit/02-after.png" width="320"> |
+
+</details>
+
+完整变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 标签说明
 
