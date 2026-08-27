@@ -13,7 +13,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-0078D4)](https://github.com/wanghoufan/DeepSeekBalanceWidget)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
-![DeepSeek 余额悬浮窗](artifacts/ui-audit/02-after.png)
+![DeepSeek 余额监控 v0.4.0](artifacts/ui-audit/02-after.png)
 
 ## 下载
 
@@ -79,11 +79,9 @@ bash scripts/install-macos.sh arm64
 - **胶囊区块顺序自定义**：设置内上移/下移调整渲染顺序，保存即生效
 
 <details>
-<summary>查看界面对照（调整前 / 调整后）</summary>
+<summary>查看当前界面（v0.4.0 展开卡片）</summary>
 
-| 调整前 | 调整后 |
-| --- | --- |
-| <img src="artifacts/ui-audit/01-before.png" width="320"> | <img src="artifacts/ui-audit/02-after.png" width="320"> |
+![DeepSeek 余额监控 v0.4.0 界面](artifacts/ui-audit/02-after.png)
 
 </details>
 
