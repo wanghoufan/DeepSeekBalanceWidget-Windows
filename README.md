@@ -79,9 +79,11 @@ bash scripts/install-macos.sh arm64
 - **胶囊区块顺序自定义**：设置内上移/下移调整渲染顺序，保存即生效
 
 <details>
-<summary>查看当前界面（v0.4.0 展开卡片）</summary>
+<summary>查看当前界面（v0.4.0）</summary>
 
-![DeepSeek 余额监控 v0.4.0 界面](artifacts/ui-audit/02-after.png)
+| 迷你胶囊（单行宽布局） | 展开卡片 |
+| --- | --- |
+| <img src="artifacts/ui-audit/01-before.png" width="480"> | <img src="artifacts/ui-audit/02-after.png" width="280"> |
 
 </details>
 
