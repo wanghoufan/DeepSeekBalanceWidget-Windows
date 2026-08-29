@@ -10,6 +10,9 @@ public partial class App : System.Windows.Application
     private const string MutexName = "DeepSeekBalanceWidget_SingleInstance";
     private const string ActivateEventName = "DeepSeekBalanceWidget_Activate";
 
+    /// <summary>应用正在退出；通知窗据此跳过重排，避免退出期访问已释放的可视对象。</summary>
+    internal static bool IsShuttingDown { get; private set; }
+
     private Mutex? _mutex;
     private EventWaitHandle? _activateHandle;
     private readonly CancellationTokenSource _cts = new();
@@ -22,6 +25,7 @@ public partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        IsShuttingDown = false;
 
         _mutex = new Mutex(false, MutexName, out _);
         try { _mutexOwned = _mutex.WaitOne(0); }
@@ -61,6 +65,8 @@ public partial class App : System.Windows.Application
 
     private void OnRequestExit()
     {
+        IsShuttingDown = true;
+        AlarmSound.Stop();
         _cts.Cancel();
         _tray?.Dispose();
         _tray = null;

@@ -3,11 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False"
-        Width="250" SizeToContent="Height">
+        Width="260" SizeToContent="Height"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
   <Border x:Name="ToastBorder" Background="#F2333333" CornerRadius="8"
           BorderBrush="#88FFFFFF" BorderThickness="1" Padding="10">
     <StackPanel>
-      <TextBlock x:Name="TitleText" FontWeight="Bold" Foreground="#FFFFFF" FontSize="13"/>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+        <TextBlock x:Name="TitleText" FontWeight="Bold" Foreground="#FFFFFF" FontSize="13"
+                   TextWrapping="Wrap" VerticalAlignment="Center"/>
+        <Button x:Name="DismissBtn" Grid.Column="1" Content="知道了"
+                Click="DismissBtn_Click" Visibility="Collapsed"
+                HorizontalAlignment="Right" VerticalAlignment="Center"
+                Margin="8,0,0,0" Padding="10,2" Cursor="Hand"
+                Background="#FFB04D" Foreground="#1A2129" BorderThickness="0"
+                FontSize="11" FontWeight="SemiBold"/>
+      </Grid>
       <TextBlock x:Name="BodyText" Foreground="#DDDDDD" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0"/>
     </StackPanel>
   </Border>

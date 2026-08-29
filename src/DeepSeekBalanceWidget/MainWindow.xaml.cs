@@ -26,8 +26,11 @@ public partial class MainWindow : Window
     private readonly ICodexAccountsUsageProvider _codexUsageProvider;
     private readonly CodexConsumptionRateTracker _codexConsumptionTracker = new();
     private readonly CodexQuotaAlertEvaluator _codexQuotaAlerts = new();
+    private IOpenCodeUsageProvider _openCodeProvider;
+    private readonly OpenCodeQuotaAlertEvaluator _openCodeQuotaAlerts = new();
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _codexTimer;
+    private readonly DispatcherTimer _openCodeTimer;
     private readonly DispatcherTimer _savePosTimer;
     private readonly DispatcherTimer _peakTimer;
     private readonly DispatcherTimer _autoHideTimer;
@@ -53,6 +56,7 @@ public partial class MainWindow : Window
         _cfg = cfg;
         _provider = provider;
         _codexUsageProvider = new CcSwitchCodexUsageProvider();
+        _openCodeProvider = new OpenCodeUsageProvider(_configService.GetOpenCodeApiKey());
 
         _savePosTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _savePosTimer.Tick += (_, _) => { _savePosTimer.Stop(); SavePosition(); };
@@ -67,7 +71,14 @@ public partial class MainWindow : Window
         ApplyMiniMode(_cfg.UseMiniMode);
         ApplyCodexAppearance();
         ApplyCodexVisibility();
-        Loaded += (_, _) => EvaluateEdgeAutoHide();
+        ApplyMonitoringVisibility();
+        Loaded += (_, _) =>
+        {
+            EvaluateEdgeAutoHide();
+            // 加载完成后用当前实际宽度做一次边界钳制：ctor 阶段 IsLoaded=false 跳过了
+            // 钳制，若保存的位置配的是更窄的旧胶囊，OC 列加宽后会从右边溢出屏幕。
+            if (_dockEdge == DockEdge.None) ClampToWorkArea();
+        };
 
         _alertState = new AlertState(
             _cfg.LastSuccessfulBalance,
@@ -85,6 +96,10 @@ public partial class MainWindow : Window
         _codexTimer.Tick += async (_, _) => await RefreshCodexUsageAsync();
         if (_cfg.EnableCodexMonitoring) _codexTimer.Start();
 
+        _openCodeTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
+        _openCodeTimer.Tick += async (_, _) => await RefreshOpenCodeUsageAsync();
+        if (_cfg.EnableOpenCodeMonitoring) _openCodeTimer.Start();
+
         _peakTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(60) };
         _peakTimer.Tick += (_, _) => RefreshPeakStatus();
         _peakTimer.Start();
@@ -92,6 +107,7 @@ public partial class MainWindow : Window
         RefreshPeakStatus();
         _ = RefreshAsync();
         if (_cfg.EnableCodexMonitoring) _ = RefreshCodexUsageAsync();
+        if (_cfg.EnableOpenCodeMonitoring) _ = RefreshOpenCodeUsageAsync();
     }
 
     private void ApplySavedPosition()
@@ -139,8 +155,11 @@ public partial class MainWindow : Window
     private void ClampToWorkArea()
     {
         var wa = SystemParameters.WorkArea;
-        Left = Math.Clamp(Left, wa.Left, Math.Max(wa.Left, wa.Right - Width));
-        Top = Math.Clamp(Top, wa.Top, Math.Max(wa.Top, wa.Bottom - Height));
+        // 迷你模式 Width=NaN，必须用 ActualWidth/ActualHeight，否则 NaN 会把坐标算成 NaN
+        double w = !double.IsNaN(Width) ? Width : (ActualWidth > 0 ? ActualWidth : 420);
+        double h = !double.IsNaN(Height) ? Height : (ActualHeight > 0 ? ActualHeight : 120);
+        Left = Math.Clamp(Left, wa.Left, Math.Max(wa.Left, wa.Right - w));
+        Top = Math.Clamp(Top, wa.Top, Math.Max(wa.Top, wa.Bottom - h));
     }
 
     public void ResetPosition()
@@ -166,7 +185,8 @@ public partial class MainWindow : Window
         _isMini = mini;
         Card.Visibility = mini ? Visibility.Collapsed : Visibility.Visible;
         MiniCard.Visibility = mini ? Visibility.Visible : Visibility.Collapsed;
-        Width = mini ? GetMiniModeWidth() : 420;
+        // 迷你模式宽度自适应内容（NaN=Auto）：估算公式总会留出多余空白，导致按钮右侧空一段
+        Width = mini ? double.NaN : 420;
         if (IsLoaded)
         {
             if (_dockEdge != DockEdge.None)
@@ -177,31 +197,7 @@ public partial class MainWindow : Window
         RearrangeMiniBlocks();
     }
 
-    private double GetMiniModeWidth()
-    {
-        double width = 16; // 左右内边距
-        foreach (string kind in _cfg.AgentOrder)
-        {
-            switch (kind)
-            {
-                case "deepseek":
-                    width += 82; // DS 标签 + 余额 + 间距
-                    break;
-                case "chatgpt":
-                    if (_cfg.EnableCodexMonitoring)
-                        width += 292; // GPT 表格容器（22+50+66+50+74 + 内边距）
-                    break;
-                case "workbuddy":
-                    width += 72; // WB 占位
-                    break;
-            }
-            width += 10; // 区块间距
-        }
-        width += 96; // 贴边/最小化/关闭三按钮 + 间距
-        return Math.Clamp(width, 120, 800);
-    }
-
-    /// <summary>按 _cfg.AgentOrder 重排胶囊区块（贴边按钮固定最右），DS/WB 单行区块垂直居中。</summary>
+    /// <summary>按 _cfg.AgentOrder 重排胶囊内容区（MiniContentPanel）里的区块，按钮固定在外层 Grid.Column 1（最右）。</summary>
     private void RearrangeMiniBlocks()
     {
         var order = _cfg.AgentOrder ?? new List<string>();
@@ -209,28 +205,25 @@ public partial class MainWindow : Window
         {
             ["deepseek"] = MiniDeepSeekBlock,
             ["chatgpt"] = MiniGptBlock,
+            ["opencode"] = MiniOpenCodeBlock,
             ["workbuddy"] = MiniWorkbuddyBlock
         };
 
+        // 内容区（DS / GPT / OC / WB）：按 AgentOrder 排序，已关闭的区块跳过不占位
         int index = 0;
         foreach (string kind in order)
         {
             if (!blocks.TryGetValue(kind, out var block)) continue;
-            if (index >= MiniRowPanel.Children.Count
-                || !ReferenceEquals(MiniRowPanel.Children[index], block))
+            if (block.Visibility == Visibility.Collapsed) continue;
+            if (index >= MiniContentPanel.Children.Count
+                || !ReferenceEquals(MiniContentPanel.Children[index], block))
             {
-                MiniRowPanel.Children.Remove(block);
-                MiniRowPanel.Children.Insert(Math.Min(index, MiniRowPanel.Children.Count), block);
+                MiniContentPanel.Children.Remove(block);
+                MiniContentPanel.Children.Insert(Math.Min(index, MiniContentPanel.Children.Count), block);
             }
             index++;
         }
-
-        // 贴边 / 最小化 / 关闭三按钮固定最右（顺序固定）
-        foreach (var btn in new[] { MiniEdgeAutoHideBtn, MiniMinBtn, MiniCloseBtn })
-        {
-            MiniRowPanel.Children.Remove(btn);
-            MiniRowPanel.Children.Add(btn);
-        }
+        // 按钮（MiniButtonBar）和刷新时间在 XAML 中已固定位置，不在内容区里操作
     }
 
     private void MiniBtn_Click(object sender, RoutedEventArgs e)
@@ -452,7 +445,10 @@ public partial class MainWindow : Window
         var codexRefresh = _cfg.EnableCodexMonitoring
             ? RefreshCodexUsageAsync()
             : Task.CompletedTask;
-        await Task.WhenAll(RefreshAsync(), codexRefresh);
+        var openCodeRefresh = _cfg.EnableOpenCodeMonitoring
+            ? RefreshOpenCodeUsageAsync()
+            : Task.CompletedTask;
+        await Task.WhenAll(RefreshAsync(), codexRefresh, openCodeRefresh);
     }
 
     public void OpenSettings()
@@ -470,6 +466,13 @@ public partial class MainWindow : Window
             ApplyMiniMode(_cfg.UseMiniMode);
             ApplyCodexAppearance();
             ApplyCodexMonitoring();
+            // OpenCode：Key 可能已变更，重建 Provider 后再应用可见性与定时器
+            if (_openCodeProvider is IDisposable d) d.Dispose();
+            _openCodeProvider = new OpenCodeUsageProvider(_configService.GetOpenCodeApiKey());
+            ApplyOpenCodeVisibility();
+            ApplyDsVisibility();
+            ApplyWorkbuddyVisibility();
+            RearrangeMiniBlocks();
             _timer.Interval = TimeSpan.FromSeconds(Math.Clamp(_cfg.RefreshIntervalSeconds, 5, 3600));
             if (_provider is DeepSeekApiClient) RebuildProvider();
             _isAuthPaused = false;
@@ -553,11 +556,15 @@ public partial class MainWindow : Window
             _configService.Save(_cfg);
 
             // ShowToastNotifications 此前从未被读取（配置项是死代码），这里一并接上，
-            // 让余额类告警与 GPT 额度预警都遵守「允许弹窗通知」开关。
+            // 让余额类告警与 GPT / OpenCode 额度预警都遵守「允许弹窗通知」开关。
+            // 低余额 / 异常下降走警报样式（循环警报声 + 常驻，需手动关闭）。
             if (decision.ShowLowBalance && _cfg.ShowToastNotifications)
-                ToastService.Show(this, "低余额提醒", $"余额 {bal.Total:0.00} {bal.Currency} 低于阈值 {_cfg.LowBalanceThreshold:0.00}");
+                ToastService.Show(this, "低余额提醒",
+                    $"余额 {bal.Total:0.00} {bal.Currency} 低于阈值 {_cfg.LowBalanceThreshold:0.00}",
+                    _cfg, ToastAlertStyle.Alarm);
             if (decision.ShowAbnormalDrop && _cfg.ShowToastNotifications)
-                ToastService.Show(this, "余额异常下降", $"单次下降 {Math.Abs(pct ?? 0):0.0}%");
+                ToastService.Show(this, "余额异常下降",
+                    $"单次下降 {Math.Abs(pct ?? 0):0.0}%", _cfg, ToastAlertStyle.Alarm);
         }
         catch (OperationCanceledException) { }
         catch (ApiException ex)
@@ -620,6 +627,193 @@ public partial class MainWindow : Window
         MiniGptBlock.Visibility = visibility;
     }
 
+    /// <summary>统一应用各监测项（DS / GPT / OC / WB）在胶囊与详细面板中的可见性与定时器。</summary>
+    private void ApplyMonitoringVisibility()
+    {
+        ApplyCodexVisibility();
+        ApplyOpenCodeVisibility();
+        ApplyDsVisibility();
+        ApplyWorkbuddyVisibility();
+        RearrangeMiniBlocks();
+    }
+
+    private void ApplyOpenCodeVisibility()
+    {
+        var visibility = _cfg.EnableOpenCodeMonitoring ? Visibility.Visible : Visibility.Collapsed;
+        OpenCodePanel.Visibility = visibility;
+        MiniOpenCodeBlock.Visibility = visibility;
+        // 构造函数阶段定时器尚未创建，容错跳过（仅设置可见性，末尾会主动拉取一次）
+        if (_openCodeTimer is null) return;
+        if (_cfg.EnableOpenCodeMonitoring)
+        {
+            _openCodeTimer.Start();
+            _ = RefreshOpenCodeUsageAsync();
+        }
+        else
+        {
+            _openCodeTimer.Stop();
+        }
+    }
+
+    private void ApplyDsVisibility()
+    {
+        var visibility = _cfg.EnableDeepSeekMonitoring ? Visibility.Visible : Visibility.Collapsed;
+        BalanceRow.Visibility = visibility;
+        MiniDeepSeekBlock.Visibility = visibility;
+    }
+
+    private void ApplyWorkbuddyVisibility()
+        => MiniWorkbuddyBlock.Visibility = _cfg.EnableWorkbuddyMonitoring
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    private bool _isOpenCodeRefreshing;
+
+    private async Task RefreshOpenCodeUsageAsync()
+    {
+        if (!_cfg.EnableOpenCodeMonitoring || _isOpenCodeRefreshing) return;
+        _isOpenCodeRefreshing = true;
+        try
+        {
+            var snapshot = await _openCodeProvider.GetUsageAsync(_cts.Token);
+            ApplyOpenCodeUsage(snapshot);
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception)
+        {
+            ApplyOpenCodeUsage(OpenCodeUsageSnapshot.Unavailable("刷新失败"));
+        }
+        finally { _isOpenCodeRefreshing = false; }
+    }
+
+    private void ApplyOpenCodeUsage(OpenCodeUsageSnapshot snapshot)
+    {
+        if (!snapshot.IsAvailable)
+        {
+            // 状态可见化：失败原因直接显示在区块标题与胶囊标签上，不再只藏 tooltip
+            string reason = snapshot.Error ?? "暂不可用";
+            OpenCodeTitleText.Text = $"OpenCode Go 额度（{reason}）";
+            OpenCodeTitleText.Foreground = new SolidColorBrush(Colors.Orange);
+            MiniOcLabel.Foreground = new SolidColorBrush(Colors.Orange);
+            MiniOpenCodeBlock.ToolTip = reason;
+
+            OpenCodeFivePct.Text = "--";
+            OpenCodeFiveUsed.Text = OpenCodeFiveReset.Text = OpenCodeFiveCd.Text = "--";
+            OpenCodeWeeklyPct.Text = "--";
+            OpenCodeWeeklyUsed.Text = OpenCodeWeeklyReset.Text = OpenCodeWeeklyCd.Text = "--";
+            OpenCodeMonthlyPct.Text = "--";
+            OpenCodeMonthlyUsed.Text = OpenCodeMonthlyReset.Text = OpenCodeMonthlyCd.Text = "--";
+            OpenCodePanel.ToolTip = reason;
+            ClearOcMiniRow(MiniOcFivePct, MiniOcFiveCd, MiniOcFiveBar);
+            ClearOcMiniRow(MiniOcWeeklyPct, MiniOcWeeklyCd, MiniOcWeeklyBar);
+            ClearOcMiniRow(MiniOcMonthlyPct, MiniOcMonthlyCd, MiniOcMonthlyBar);
+            return;
+        }
+
+        OpenCodeTitleText.Text = "OpenCode Go 额度";
+        OpenCodeTitleText.Foreground = new SolidColorBrush(Color.FromRgb(0xDD, 0xEB, 0xFF));
+        MiniOcLabel.Foreground = new SolidColorBrush(Color.FromRgb(0xDD, 0xEB, 0xFF));
+        OpenCodePanel.ToolTip = null;
+        var now = DateTimeOffset.Now;
+        var byKind = snapshot.Windows.ToDictionary(window => window.Kind);
+
+        ApplyOcRow(byKind.GetValueOrDefault("rolling"), "5h",
+            OpenCodeFivePct, OpenCodeFiveUsed, OpenCodeFiveReset, OpenCodeFiveCd,
+            MiniOcFivePct, MiniOcFiveCd, MiniOcFiveBar, now);
+        ApplyOcRow(byKind.GetValueOrDefault("weekly"), "周",
+            OpenCodeWeeklyPct, OpenCodeWeeklyUsed, OpenCodeWeeklyReset, OpenCodeWeeklyCd,
+            MiniOcWeeklyPct, MiniOcWeeklyCd, MiniOcWeeklyBar, now);
+        ApplyOcRow(byKind.GetValueOrDefault("monthly"), "月",
+            OpenCodeMonthlyPct, OpenCodeMonthlyUsed, OpenCodeMonthlyReset, OpenCodeMonthlyCd,
+            MiniOcMonthlyPct, MiniOcMonthlyCd, MiniOcMonthlyBar, now);
+
+        RaiseOpenCodeQuotaAlerts(snapshot);
+    }
+
+    private static void ApplyOcRow(
+        OpenCodeUsageWindow? window,
+        string shortLabel,
+        System.Windows.Controls.TextBlock pct,
+        System.Windows.Controls.TextBlock used,
+        System.Windows.Controls.TextBlock reset,
+        System.Windows.Controls.TextBlock cd,
+        System.Windows.Controls.TextBlock miniPct,
+        System.Windows.Controls.TextBlock miniCd,
+        System.Windows.Controls.Border miniBar,
+        DateTimeOffset now)
+    {
+        if (window is null)
+        {
+            pct.Text = used.Text = reset.Text = cd.Text = "--";
+            ClearOcMiniRow(miniPct, miniCd, miniBar);
+            return;
+        }
+
+        pct.Text = $"{window.RemainingPercent}%";
+        used.Text = OpenCodeUsageFormatter.FormatUsedEstimate(window);
+        used.ToolTip = "API 只返回百分比，美元金额按 Go 套餐固定限额换算估算";
+        reset.Text = OpenCodeUsageFormatter.FormatResetTime(window);
+        cd.Text = OpenCodeUsageFormatter.FormatCountdown(window, now);
+        pct.ToolTip = $"{shortLabel} 已用 {window.UsedPercent}%";
+        System.Windows.Controls.ToolTipService.SetToolTip(cd, window.ResetsAt is DateTimeOffset r
+            ? $"恢复时间：{r.ToLocalTime():yyyy-MM-dd HH:mm}"
+            : null);
+
+        miniPct.Text = $"{window.RemainingPercent}%";
+        miniCd.Text = OpenCodeUsageFormatter.FormatCountdownShort(window, now);
+        UpdateOcBar(miniBar, window.RemainingPercent);
+    }
+
+    private static void ClearOcMiniRow(
+        System.Windows.Controls.TextBlock pct,
+        System.Windows.Controls.TextBlock cd,
+        System.Windows.Controls.Border bar)
+    {
+        pct.Text = "--";
+        cd.Text = "--";
+        bar.Width = 0;
+    }
+
+    /// <summary>进度条填充：宽度=剩余百分比，颜色按剩余量分档（≥60 绿 / 30-59 黄 / <30 红）。</summary>
+    private static void UpdateOcBar(System.Windows.Controls.Border bar, int remainingPercent)
+    {
+        const double trackWidth = 28;
+        bar.Width = Math.Max(0, Math.Min(trackWidth, trackWidth * remainingPercent / 100.0));
+        var color = remainingPercent >= 60
+            ? Color.FromRgb(0x78, 0xD7, 0x9A)
+            : remainingPercent >= 30
+                ? Color.FromRgb(0xEF, 0x9F, 0x27)
+                : Color.FromRgb(0xE2, 0x4B, 0x4A);
+        bar.Background = new SolidColorBrush(color);
+    }
+
+    /// <summary>评估 OpenCode 额度预警并弹窗：低量走警报（响声+常驻），恢复走普通通知。</summary>
+    private void RaiseOpenCodeQuotaAlerts(OpenCodeUsageSnapshot snapshot)
+    {
+        if (!_cfg.ShowToastNotifications) return;
+
+        foreach (var alert in _openCodeQuotaAlerts.Evaluate(snapshot, _cfg, DateTimeOffset.Now))
+        {
+            if (alert.IsRecovery)
+            {
+                ToastService.Show(this,
+                    $"OpenCode · {alert.WindowLabel}已恢复",
+                    $"剩余额度已回到 {alert.RemainingPercent}%", _cfg);
+                continue;
+            }
+
+            string usedHint = alert.EstimatedUsedUsd.HasValue
+                ? $"（已用 ≈ ${alert.EstimatedUsedUsd.Value:0.##}）"
+                : string.Empty;
+            string resetHint = alert.ResetsAt is DateTimeOffset resetsAt
+                ? $"预计 {resetsAt.ToLocalTime():MM-dd HH:mm} 恢复"
+                : "恢复时间未知";
+            ToastService.Show(this,
+                $"OpenCode · {alert.WindowLabel}仅剩 {alert.RemainingPercent}%",
+                $"{usedHint}{resetHint}", _cfg, ToastAlertStyle.Alarm);
+        }
+    }
+
     private void ApplyCodexAppearance()
     {
         double size = Math.Clamp(_cfg.CodexFontSize, 10, 24);
@@ -636,10 +830,12 @@ public partial class MainWindow : Window
             CodexAccount1Name, CodexAccount2Name,
             CodexFiveText, CodexFiveResetText, CodexWeeklyText, CodexWeeklyResetText,
             CodexFiveText2, CodexFiveResetText2, CodexWeeklyText2, CodexWeeklyResetText2,
-            MiniDsLabel, MiniBalanceText, MiniPeakLabel,
+            MiniDsLabel, MiniBalanceText, MiniChangeText, MiniPeakLabel,
             MiniGptA1Label, MiniGptA1Five, MiniGptA1FiveCd, MiniGptA1Weekly, MiniGptA1WeeklyCd,
             MiniGptA2Label, MiniGptA2Five, MiniGptA2FiveCd, MiniGptA2Weekly, MiniGptA2WeeklyCd,
-            MiniWorkbuddyBlock
+            MiniOcLabel, MiniOcFivePct, MiniOcFiveCd, MiniOcWeeklyPct, MiniOcWeeklyCd,
+            MiniOcMonthlyPct, MiniOcMonthlyCd,
+            MiniWorkbuddyBlock, MiniRefreshTimeText
         })
         {
             text.FontFamily = font;
@@ -659,6 +855,7 @@ public partial class MainWindow : Window
 
         MiniDsLabel.FontSize = Math.Max(11, size - 1);
         MiniBalanceText.FontSize = Math.Max(12, size);
+        MiniChangeText.FontSize = Math.Max(9, size - 5);
         MiniPeakLabel.FontSize = Math.Max(10, size - 3);
         MiniGptA1Label.FontSize = Math.Max(10, size - 2);
         MiniGptA2Label.FontSize = MiniGptA1Label.FontSize;
@@ -670,6 +867,13 @@ public partial class MainWindow : Window
         MiniGptA2FiveCd.FontSize = MiniGptA1FiveCd.FontSize;
         MiniGptA1WeeklyCd.FontSize = MiniGptA1FiveCd.FontSize;
         MiniGptA2WeeklyCd.FontSize = MiniGptA1FiveCd.FontSize;
+        MiniOcLabel.FontSize = Math.Max(10, size - 2);
+        MiniOcFivePct.FontSize = Math.Max(10, size - 2);
+        MiniOcWeeklyPct.FontSize = MiniOcFivePct.FontSize;
+        MiniOcMonthlyPct.FontSize = MiniOcFivePct.FontSize;
+        MiniOcFiveCd.FontSize = Math.Max(10, size - 3);
+        MiniOcWeeklyCd.FontSize = MiniOcFiveCd.FontSize;
+        MiniOcMonthlyCd.FontSize = MiniOcFiveCd.FontSize;
         MiniWorkbuddyBlock.FontSize = Math.Max(11, size - 1);
     }
 
@@ -727,7 +931,7 @@ public partial class MainWindow : Window
             {
                 ToastService.Show(this,
                     $"{who} · {what}已恢复",
-                    $"剩余额度已回到 {alert.RemainingPercent}%");
+                    $"剩余额度已回到 {alert.RemainingPercent}%", _cfg);
                 continue;
             }
 
@@ -736,7 +940,8 @@ public partial class MainWindow : Window
                 : "恢复时间未知";
             ToastService.Show(this,
                 $"{who} · {what}仅剩 {alert.RemainingPercent}%",
-                $"{resetHint}，建议提前做好上下文交接");
+                $"{resetHint}，建议提前做好上下文交接",
+                _cfg, ToastAlertStyle.Alarm);
         }
     }
 
@@ -983,10 +1188,13 @@ public partial class MainWindow : Window
         BalanceText.Text = balance;
         MiniBalanceText.Text = balance;
 
+        // 完整卡片变动信息
         if (change is null)
         {
             ChangeText.Text = "首次";
             ChangeText.Foreground = new SolidColorBrush(Color.FromRgb(0xD0, 0xD0, 0xD0));
+            MiniChangeText.Text = "";
+            MiniChangeText.Foreground = new SolidColorBrush(Color.FromRgb(0x8F, 0x99, 0xA6));
         }
         else
         {
@@ -996,9 +1204,14 @@ public partial class MainWindow : Window
             ChangeText.Text = txt;
             ChangeText.Foreground = new SolidColorBrush(change.Value >= 0
                 ? Color.FromRgb(0x4C, 0xC9, 0x4C) : Color.FromRgb(0xE8, 0x66, 0x56));
+            // 胶囊变动信息：紧凑小字，只显示金额不含百分比
+            MiniChangeText.Text = sign + change.Value.ToString("0.00");
+            MiniChangeText.Foreground = new SolidColorBrush(change.Value >= 0
+                ? Color.FromRgb(0x4C, 0xC9, 0x4C) : Color.FromRgb(0xE8, 0x66, 0x56));
         }
 
         RefreshTimeText.Text = "上次刷新 " + DateTime.Now.ToString("HH:mm:ss");
+        MiniRefreshTimeText.Text = "刷新 " + DateTime.Now.ToString("HH:mm:ss");
     }
 
     private void ShowError(string msg)

@@ -175,13 +175,14 @@ public class CodexUsageParserTests
             CodexUsageFormatter.FormatMiniWindow(
                 new CodexUsageWindow(25, 75, 300, now.AddHours(2).AddMinutes(30)), now));
         Assert.Equal(
-            "周 78%·4d12h",
+            "周 78%·4d",
             CodexUsageFormatter.FormatMiniWindow(
                 new CodexUsageWindow(22, 78, 10080, now.AddDays(4).AddHours(12)), now));
     }
 
     [Theory]
-    [InlineData(6, 18, 30, "6d18h")]
+    [InlineData(6, 18, 30, "6d")]
+    [InlineData(2, 5, 0, "2d5h")]
     [InlineData(0, 8, 25, "8h25m")]
     [InlineData(0, 0, 12, "12m")]
     [InlineData(0, 0, 59, "59m")]
@@ -220,7 +221,7 @@ public class CodexUsageParserTests
         var now = new DateTimeOffset(2026, 8, 9, 12, 0, 0, TimeSpan.FromHours(8));
         var weekly = new CodexUsageWindow(22, 78, 10080, now.AddDays(4).AddHours(12));
 
-        Assert.Equal("4d12h", CodexUsageFormatter.FormatResetCompact(weekly, now));
+        Assert.Equal("4d", CodexUsageFormatter.FormatResetCompact(weekly, now));
     }
 
     [Fact]

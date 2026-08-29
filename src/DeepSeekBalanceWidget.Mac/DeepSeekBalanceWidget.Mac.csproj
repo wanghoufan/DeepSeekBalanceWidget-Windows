@@ -34,6 +34,10 @@
     <Compile Include="../DeepSeekBalanceWidget/Services/ICodexAccountsUsageProvider.cs" Link="Services/ICodexAccountsUsageProvider.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/ICodexUsageProvider.cs" Link="Services/ICodexUsageProvider.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/MockBalanceService.cs" Link="Services/MockBalanceService.cs" />
+    <Compile Include="../DeepSeekBalanceWidget/Services/IOpenCodeUsageProvider.cs" Link="Services/IOpenCodeUsageProvider.cs" />
+    <Compile Include="../DeepSeekBalanceWidget/Services/OpenCodeUsageProvider.cs" Link="Services/OpenCodeUsageProvider.cs" />
+    <Compile Include="../DeepSeekBalanceWidget/Services/OpenCodeUsageFormatter.cs" Link="Services/OpenCodeUsageFormatter.cs" />
+    <Compile Include="../DeepSeekBalanceWidget/Services/OpenCodeQuotaAlertEvaluator.cs" Link="Services/OpenCodeQuotaAlertEvaluator.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/PeakHourCalculator.cs" Link="Services/PeakHourCalculator.cs" />
   </ItemGroup>
 </Project>

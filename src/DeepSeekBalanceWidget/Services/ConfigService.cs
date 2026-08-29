@@ -38,6 +38,7 @@ public sealed class ConfigService
             var json = File.ReadAllText(_filePath, Encoding.UTF8);
             var cfg = JsonSerializer.Deserialize<AppConfig>(json, JsonOpts);
             if (cfg is null) throw new InvalidDataException("config null");
+            cfg.Normalize();
             return _lastConfig = cfg;
         }
         catch
@@ -109,5 +110,26 @@ public sealed class ConfigService
         var enc = ProtectedData.Protect(
             Encoding.UTF8.GetBytes(plainKey), null, DataProtectionScope.CurrentUser);
         cfg.ApiKeyEncrypted = Convert.ToBase64String(enc);
+    }
+
+    public string? GetOpenCodeApiKey()
+    {
+        var b64 = _lastConfig?.OpenCodeApiKeyEncrypted;
+        if (string.IsNullOrEmpty(b64)) return null;
+        try
+        {
+            var enc = Convert.FromBase64String(b64);
+            return Encoding.UTF8.GetString(
+                ProtectedData.Unprotect(enc, null, DataProtectionScope.CurrentUser));
+        }
+        catch { return null; }
+    }
+
+    public void SetOpenCodeApiKey(AppConfig cfg, string? plainKey)
+    {
+        if (string.IsNullOrEmpty(plainKey)) { cfg.OpenCodeApiKeyEncrypted = null; return; }
+        var enc = ProtectedData.Protect(
+            Encoding.UTF8.GetBytes(plainKey), null, DataProtectionScope.CurrentUser);
+        cfg.OpenCodeApiKeyEncrypted = Convert.ToBase64String(enc);
     }
 }

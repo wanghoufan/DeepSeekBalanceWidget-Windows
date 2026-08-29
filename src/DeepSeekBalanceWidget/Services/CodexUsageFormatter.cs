@@ -63,7 +63,8 @@ public static class CodexUsageFormatter
     }
 
     /// <summary>
-    /// 胶囊用的紧凑倒计时：2h30m / 4d12h / 45m / 即将重置 / --。
+    /// 胶囊用的紧凑倒计时：2h30m / 4d12h / 28d / 45m / 即将重置 / --。
+    /// 当倒计时 ≥ 3 天时只显示「Xd」，去掉小时以节省胶囊横向空间。
     /// </summary>
     public static string FormatCountdownShort(DateTimeOffset? resetsAt, DateTimeOffset now)
     {
@@ -74,7 +75,9 @@ public static class CodexUsageFormatter
             return $"{Math.Max(1, (int)Math.Ceiling(remaining.TotalMinutes))}m";
         if (remaining.TotalHours < 24)
             return $"{(int)Math.Floor(remaining.TotalHours)}h{remaining.Minutes}m";
-        return $"{(int)Math.Floor(remaining.TotalDays)}d{(int)Math.Floor(remaining.TotalHours % 24)}h";
+        int days = (int)Math.Floor(remaining.TotalDays);
+        if (days >= 3) return $"{days}d";
+        return $"{days}d{(int)Math.Floor(remaining.TotalHours % 24)}h";
     }
 
     public static string FormatDuration(int? minutes) => minutes switch
