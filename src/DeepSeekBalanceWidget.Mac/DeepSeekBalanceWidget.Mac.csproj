@@ -26,6 +26,7 @@
     <Compile Include="../DeepSeekBalanceWidget/Services/CodexAppServerClient.cs" Link="Services/CodexAppServerClient.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/CodexConsumptionRateTracker.cs" Link="Services/CodexConsumptionRateTracker.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/CodexUsageFormatter.cs" Link="Services/CodexUsageFormatter.cs" />
+    <Compile Include="../DeepSeekBalanceWidget/Services/CodexQuotaAlertEvaluator.cs" Link="Services/CodexQuotaAlertEvaluator.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/CodexUsageParser.cs" Link="Services/CodexUsageParser.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/CurrencySelector.cs" Link="Services/CurrencySelector.cs" />
     <Compile Include="../DeepSeekBalanceWidget/Services/DeepSeekApiClient.cs" Link="Services/DeepSeekApiClient.cs" />

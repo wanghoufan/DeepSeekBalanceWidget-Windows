@@ -25,6 +25,7 @@ public partial class MainWindow : Window
     private IBalanceProvider _provider;
     private readonly ICodexAccountsUsageProvider _codexUsageProvider;
     private readonly CodexConsumptionRateTracker _codexConsumptionTracker = new();
+    private readonly CodexQuotaAlertEvaluator _codexQuotaAlerts = new();
     private readonly DispatcherTimer _timer;
     private readonly DispatcherTimer _codexTimer;
     private readonly DispatcherTimer _savePosTimer;
@@ -551,9 +552,11 @@ public partial class MainWindow : Window
             _cfg.InLowBalanceState = decision.NewState.InLowBalanceState;
             _configService.Save(_cfg);
 
-            if (decision.ShowLowBalance)
+            // ShowToastNotifications 此前从未被读取（配置项是死代码），这里一并接上，
+            // 让余额类告警与 GPT 额度预警都遵守「允许弹窗通知」开关。
+            if (decision.ShowLowBalance && _cfg.ShowToastNotifications)
                 ToastService.Show(this, "低余额提醒", $"余额 {bal.Total:0.00} {bal.Currency} 低于阈值 {_cfg.LowBalanceThreshold:0.00}");
-            if (decision.ShowAbnormalDrop)
+            if (decision.ShowAbnormalDrop && _cfg.ShowToastNotifications)
                 ToastService.Show(this, "余额异常下降", $"单次下降 {Math.Abs(pct ?? 0):0.0}%");
         }
         catch (OperationCanceledException) { }
@@ -702,6 +705,38 @@ public partial class MainWindow : Window
         else
         {
             ClearMiniGptRow(MiniGptA2Label, MiniGptA2Five, MiniGptA2FiveCd, MiniGptA2Weekly, MiniGptA2WeeklyCd);
+        }
+
+        RaiseCodexQuotaAlerts(accounts);
+    }
+
+    /// <summary>
+    /// 评估 ChatGPT 额度预警并弹窗：剩余额度降到阈值档位时预警，额度恢复时通知。
+    /// 文案会区分 5 小时额度 / 周额度，并写明具体账号。
+    /// </summary>
+    private void RaiseCodexQuotaAlerts(IReadOnlyList<CodexAccountUsageSnapshot> accounts)
+    {
+        if (!_cfg.ShowToastNotifications) return;
+
+        foreach (var alert in _codexQuotaAlerts.Evaluate(accounts, _cfg, DateTimeOffset.Now))
+        {
+            string who = ShortAccountName(alert.Email);
+            string what = alert.WindowLabel;
+
+            if (alert.IsRecovery)
+            {
+                ToastService.Show(this,
+                    $"{who} · {what}已恢复",
+                    $"剩余额度已回到 {alert.RemainingPercent}%");
+                continue;
+            }
+
+            string resetHint = alert.ResetsAt is DateTimeOffset resetsAt
+                ? $"预计 {resetsAt.ToLocalTime():MM-dd HH:mm} 恢复"
+                : "恢复时间未知";
+            ToastService.Show(this,
+                $"{who} · {what}仅剩 {alert.RemainingPercent}%",
+                $"{resetHint}，建议提前做好上下文交接");
         }
     }
 

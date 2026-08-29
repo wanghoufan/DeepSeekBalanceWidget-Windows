@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         Topmost="True" ShowInTaskbar="False" ShowActivated="False"
-        Width="220" SizeToContent="Height">
+        Width="250" SizeToContent="Height">
   <Border x:Name="ToastBorder" Background="#F2333333" CornerRadius="8"
           BorderBrush="#88FFFFFF" BorderThickness="1" Padding="10">
     <StackPanel>

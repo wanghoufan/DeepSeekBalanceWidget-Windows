@@ -31,6 +31,12 @@ public partial class SettingsWindow : Window
         EdgeAutoHideCheck.IsChecked = cfg.EnableEdgeAutoHide;
         MiniModeCheck.IsChecked = cfg.UseMiniMode;
         EnableCodexCheck.IsChecked = cfg.EnableCodexMonitoring;
+        EnableQuotaAlertCheck.IsChecked = cfg.EnableCodexQuotaAlerts;
+        QuotaThresholdsBox.Text = cfg.CodexQuotaAlertThresholds is { Count: > 0 } thresholds
+            ? string.Join(", ", thresholds)
+            : "20, 10";
+        QuotaRecoveredBox.Text = System.Math.Clamp(cfg.CodexQuotaRecoveredPercent, 1, 100).ToString();
+        WeeklyAlertCheck.IsChecked = cfg.CodexWeeklyAlertEnabled;
         CodexFontSizeBox.Text = System.Math.Clamp(cfg.CodexFontSize, 10, 24).ToString("0.#");
         CodexFontStyleBox.SelectedIndex = cfg.CodexFontStyle switch
         {
@@ -107,6 +113,10 @@ public partial class SettingsWindow : Window
         if (!double.TryParse(CodexFontSizeBox.Text, out double codexFontSize) ||
             codexFontSize < 10 || codexFontSize > 24)
         { System.Windows.MessageBox.Show("额度文字大小需在 10-24 之间"); return; }
+        if (!TryParseThresholds(QuotaThresholdsBox.Text, out var quotaThresholds))
+        { System.Windows.MessageBox.Show("预警档位需为 1-99 的整数，多个用逗号分隔（如 20, 10）"); return; }
+        if (!int.TryParse(QuotaRecoveredBox.Text, out int recoveredPct) || recoveredPct < 1 || recoveredPct > 100)
+        { System.Windows.MessageBox.Show("恢复判定阈值需在 1-100 之间"); return; }
 
         // 高峰区间校验：整数小时，Start 0-23、End 1-24（半开区间支持 24），Start < End
         if (!TryParseHour(Peak1StartBox.Text, out int p1s) || p1s < 0 || p1s > 23 ||
@@ -131,6 +141,10 @@ public partial class SettingsWindow : Window
         _cfg.EnableEdgeAutoHide = EdgeAutoHideCheck.IsChecked == true;
         _cfg.UseMiniMode = MiniModeCheck.IsChecked == true;
         _cfg.EnableCodexMonitoring = EnableCodexCheck.IsChecked == true;
+        _cfg.EnableCodexQuotaAlerts = EnableQuotaAlertCheck.IsChecked == true;
+        _cfg.CodexQuotaAlertThresholds = quotaThresholds;
+        _cfg.CodexQuotaRecoveredPercent = recoveredPct;
+        _cfg.CodexWeeklyAlertEnabled = WeeklyAlertCheck.IsChecked == true;
         _cfg.CodexFontSize = codexFontSize;
         _cfg.CodexFontStyle = (CodexFontStyleBox.SelectedItem as System.Windows.Controls.ComboBoxItem)
             ?.Tag?.ToString() ?? "DeepSeek";
@@ -148,4 +162,22 @@ public partial class SettingsWindow : Window
     }
 
     private static bool TryParseHour(string s, out int h) => int.TryParse(s, out h);
+
+    /// <summary>
+    /// 解析预警档位，如 "20, 10" → [20, 10]。
+    /// 任一档位不是 1-99 的整数则判定失败；全部留空时回退默认档位 20 / 10。
+    /// </summary>
+    private static bool TryParseThresholds(string? text, out List<int> thresholds)
+    {
+        thresholds = new List<int>();
+        var parts = (text ?? "")
+            .Split(',', System.StringSplitOptions.RemoveEmptyEntries | System.StringSplitOptions.TrimEntries);
+        foreach (string part in parts)
+        {
+            if (!int.TryParse(part, out int value) || value < 1 || value > 99) return false;
+            if (!thresholds.Contains(value)) thresholds.Add(value);
+        }
+        if (thresholds.Count == 0) thresholds = new List<int> { 20, 10 };
+        return true;
+    }
 }

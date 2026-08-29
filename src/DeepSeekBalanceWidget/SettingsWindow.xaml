@@ -41,6 +41,27 @@
     <CheckBox x:Name="MiniModeCheck" Content="迷你胶囊模式（默认收起）" Margin="0,0,0,8"/>
     <CheckBox x:Name="EnableCodexCheck" Content="开启 ChatGPT Plus 额度监测" Margin="0,0,0,8"
               ToolTip="通过本机已登录的 Codex 读取 ChatGPT Plus 用量窗口"/>
+    <CheckBox x:Name="EnableQuotaAlertCheck" Content="开启额度预警通知" Margin="0,0,0,4"
+              ToolTip="剩余额度降到设定档位时弹窗预警；额度恢复到高位时也会通知"/>
+    <Grid Margin="0,0,0,4">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="12"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+      <StackPanel Grid.Column="0">
+        <TextBlock Text="预警档位（剩余%，逗号分隔）" Margin="0,0,0,4"/>
+        <TextBox x:Name="QuotaThresholdsBox"
+                 ToolTip="例如 20, 10：剩余降到 20% 与 10% 时各提醒一次"/>
+      </StackPanel>
+      <StackPanel Grid.Column="2">
+        <TextBlock Text="恢复判定阈值（%）" Margin="0,0,0,4"/>
+        <TextBox x:Name="QuotaRecoveredBox"
+                 ToolTip="低于该值后再回到该值，才播报“额度已恢复”"/>
+      </StackPanel>
+    </Grid>
+    <CheckBox x:Name="WeeklyAlertCheck" Content="周额度也参与预警" Margin="0,0,0,12"
+              ToolTip="周额度耗尽需等一周才恢复，建议开启"/>
     <Grid Margin="0,0,0,12">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="*"/>
