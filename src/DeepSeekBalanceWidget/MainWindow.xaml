@@ -320,7 +320,7 @@
                     VerticalAlignment="Center">
               <Grid>
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="20"/>
+                  <ColumnDefinition Width="26"/>
                   <ColumnDefinition Width="34"/>
                   <ColumnDefinition Width="52"/>
                   <ColumnDefinition Width="Auto"/>
