@@ -7,8 +7,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{98A63634-B31
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepSeekBalanceWidget", "src\DeepSeekBalanceWidget\DeepSeekBalanceWidget.csproj", "{68AA569D-3EB3-4F3D-B75E-968A69031120}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepSeekBalanceWidget.Mac", "src\DeepSeekBalanceWidget.Mac\DeepSeekBalanceWidget.Mac.csproj", "{A1E00E10-7862-4B93-82BE-0C853FC7EC98}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{C6582C1A-68C0-44DE-8295-E2944E91D5E7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DeepSeekBalanceWidget.Tests", "tests\DeepSeekBalanceWidget.Tests\DeepSeekBalanceWidget.Tests.csproj", "{5991C395-04B8-4267-9C44-05FD8D240B3B}"
@@ -26,10 +24,6 @@ Global
 		{68AA569D-3EB3-4F3D-B75E-968A69031120}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{68AA569D-3EB3-4F3D-B75E-968A69031120}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{68AA569D-3EB3-4F3D-B75E-968A69031120}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A1E00E10-7862-4B93-82BE-0C853FC7EC98}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A1E00E10-7862-4B93-82BE-0C853FC7EC98}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A1E00E10-7862-4B93-82BE-0C853FC7EC98}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A1E00E10-7862-4B93-82BE-0C853FC7EC98}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5991C395-04B8-4267-9C44-05FD8D240B3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{5991C395-04B8-4267-9C44-05FD8D240B3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5991C395-04B8-4267-9C44-05FD8D240B3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -37,7 +31,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{68AA569D-3EB3-4F3D-B75E-968A69031120} = {98A63634-B31D-4BBA-946A-1A6BB5A6AC41}
-		{A1E00E10-7862-4B93-82BE-0C853FC7EC98} = {98A63634-B31D-4BBA-946A-1A6BB5A6AC41}
 		{5991C395-04B8-4267-9C44-05FD8D240B3B} = {C6582C1A-68C0-44DE-8295-E2944E91D5E7}
 	EndGlobalSection
 EndGlobal

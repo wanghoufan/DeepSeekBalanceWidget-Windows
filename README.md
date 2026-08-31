@@ -1,16 +1,20 @@
 # DeepSeek Balance Widget
 
+> **Windows 版（本仓库）** · DeepSeek 余额 & ChatGPT Plus 用量监控桌面悬浮窗 · 基于 .NET 8 / WPF
+>
+> macOS 版已拆分到独立仓库：[DeepSeekBalanceWidget-Mac](https://github.com/wanghoufan/DeepSeekBalanceWidget-Mac)
+
 > DeepSeek 余额 & ChatGPT Plus 用量监控桌面悬浮窗 · 支持 Windows 11 与 macOS · 基于 .NET 8
 >
 > _DeepSeek balance & ChatGPT Plus usage monitor — a desktop widget for Windows 11 and macOS._
 
-一个面向 Windows 11 与 macOS 的 DeepSeek API 余额与 ChatGPT Plus 用量监控小工具。它支持余额轮询、Plus 剩余额度、开机自启和异常状态提示；Windows 版本另提供贴边自动隐藏、迷你胶囊和系统托盘。
+一个面向 Windows 11 的 DeepSeek API 余额与 ChatGPT Plus 用量监控小工具。它支持余额轮询、Plus 剩余额度、开机自启和异常状态提示；Windows 版本另提供贴边自动隐藏、迷你胶囊和系统托盘。
 
-这是一个面向中文用户的桌面工具。Windows 界面基于 WPF，macOS 界面基于 Avalonia，二者共用余额与用量读取逻辑。下面的标签是 GitHub 使用的技术分类，中文含义见[标签说明](#标签说明)。
+这是一个面向中文用户的 Windows 桌面工具，界面基于 WPF。下面的标签是 GitHub 使用的技术分类，中文含义见[标签说明](#标签说明)。
 
 [![CI](https://github.com/wanghoufan/DeepSeekBalanceWidget/actions/workflows/ci.yml/badge.svg)](https://github.com/wanghoufan/DeepSeekBalanceWidget/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/wanghoufan/DeepSeekBalanceWidget?display_name=tag)](https://github.com/wanghoufan/DeepSeekBalanceWidget/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-0078D4)](https://github.com/wanghoufan/DeepSeekBalanceWidget)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078D4)](https://github.com/wanghoufan/DeepSeekBalanceWidget)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
 ![DeepSeek 余额监控 v0.5.0](artifacts/ui-audit/02-after.png)
@@ -22,43 +26,14 @@
 | 文件 | 适用平台 |
 | --- | --- |
 | `DeepSeekBalanceWidget-v0.5.0-win-x64.zip` | Windows 11 x64 |
-| `DeepSeekBalanceWidget-v0.5.0-macos-arm64.zip` | macOS Apple Silicon（M 系列） |
-| `DeepSeekBalanceWidget-v0.5.0-macos-x64.zip` | macOS Intel |
 
 **Windows**：解压后直接运行 `DeepSeekBalanceWidget.exe`。发布包为 Windows x64 自包含单文件版本，目标电脑无需预先安装 .NET Runtime。
 
-**macOS**：解压后把 `DeepSeekBalanceWidget.app` 拖入“应用程序”文件夹即可，无需安装 .NET。
+> 第一次启动后，请在设置中填写自己的 DeepSeek API Key。Windows 版 API Key 使用 DPAPI 加密保存在本地，不会上传到 GitHub。
 
-> 第一次启动后，请在设置中填写自己的 DeepSeek API Key。Windows 版 API Key 使用 DPAPI 加密保存在本地，macOS 版存入登录钥匙串，都不会上传到 GitHub。
+## macOS 版本
 
-## macOS 使用
-
-macOS 版是独立的原生 `.app` 菜单栏应用，不会影响现有 Windows 版。它支持 Apple Silicon 和 Intel Mac，API Key 保存到当前用户的 macOS 登录钥匙串。
-
-首次运行未签名的应用时，若 Gatekeeper 阻止打开，请在 Finder 中按住 Control 点击应用并选择“打开”。
-
-macOS 版在设置中可启用“登录时自动启动”；这会写入当前用户的 `~/Library/LaunchAgents/com.deepseekbalancewidget.plist`。ChatGPT Plus 用量继续读取本机 `~/.cc-switch/codex_oauth_auth.json`，与 Windows 版使用相同的数据来源。
-
-### 在 Mac 上自行构建
-
-在安装了 .NET 8 SDK 的 Mac 上执行：
-
-```bash
-chmod +x scripts/publish-macos.sh
-./scripts/publish-macos.sh arm64   # Apple Silicon（M 系列）
-# 或 ./scripts/publish-macos.sh x64  # Intel Mac
-open release/macos-arm64/DeepSeekBalanceWidget.app
-```
-
-生成的应用是自包含的，最终使用者不需要安装 .NET（发布包会包含运行时，因此体积会较大）。
-
-要像其他 App 一样从 Launchpad 启动，可在打包后安装到当前用户的“应用程序”目录：
-
-```bash
-bash scripts/install-macos.sh arm64
-```
-
-脚本会自动打开应用，使其注册到 Launchpad；之后可直接从 Launchpad 或 Finder 的“应用程序”中启动。同名旧版本会被移动为带时间戳的备份。
+macOS 版已拆分到独立仓库：[DeepSeekBalanceWidget-Mac](https://github.com/wanghoufan/DeepSeekBalanceWidget-Mac)。本仓库仅维护 Windows 版本，macOS 的构建、发布与使用请前往该仓库。
 
 ## 主要功能
 
@@ -70,9 +45,8 @@ bash scripts/install-macos.sh arm64
 - **胶囊区块顺序自定义**（v0.4.0）：设置内上移/下移调整 DeepSeek / ChatGPT / OpenCode / WorkBuddy 的渲染顺序，保存即生效
 - 低余额及异常下降提醒，带冷却机制避免重复打扰
 - Windows 版提供完整卡片与迷你胶囊模式，可自由拖动、记忆位置，并可选贴边自动隐藏
-- macOS 版在菜单栏实时显示余额、Plus 用量百分比和高峰时段指示
 - 系统托盘/菜单栏状态、置顶、隐藏、开机自启；按北京时间显示官方峰值时段参考
-- Windows 版 API Key 使用 DPAPI CurrentUser 加密保存；macOS 版存入登录钥匙串
+- Windows 版 API Key 使用 DPAPI CurrentUser 加密保存
 
 ## v0.5.0 更新亮点
 
@@ -134,7 +108,7 @@ release\DeepSeekBalanceWidget.exe
 .\scripts\publish.ps1 -Runtime win-arm64
 ```
 
-在 macOS 上运行 `scripts/publish-macos.sh` 生成 `.app` 包，见上文“在 Mac 上自行构建”。
+macOS 构建与发布请在独立仓库 DeepSeekBalanceWidget-Mac 进行。
 
 打上 `v*` 标签推送后，GitHub Actions 会自动构建 Windows 与 macOS（arm64/x64）安装包并发布到 Releases 页面。
 
@@ -142,7 +116,7 @@ release\DeepSeekBalanceWidget.exe
 
 环境要求：
 
-- Windows 11（Windows 版）或 macOS 12+（macOS 版）
+- Windows 11（Windows 版）
 - .NET 8 SDK
 - Visual Studio 2022、Rider 或 VS Code（可选）
 
@@ -153,12 +127,7 @@ dotnet build DeepSeekBalanceWidget.sln
 dotnet test DeepSeekBalanceWidget.sln
 ```
 
-macOS 项目单独构建：
-
-```bash
-dotnet build src/DeepSeekBalanceWidget.Mac/DeepSeekBalanceWidget.Mac.csproj
-dotnet run --project src/DeepSeekBalanceWidget.Mac/DeepSeekBalanceWidget.Mac.csproj
-```
+macOS 项目构建见独立仓库 DeepSeekBalanceWidget-Mac。
 
 运行 Mock：
 
@@ -171,8 +140,7 @@ dotnet run --project .\src\DeepSeekBalanceWidget -- --mock-scenario sequence
 ```text
 .
 ├─ src/
-│  ├─ DeepSeekBalanceWidget/           Windows WPF 应用
-│  └─ DeepSeekBalanceWidget.Mac/       macOS Avalonia 应用
+│  └─ DeepSeekBalanceWidget/           Windows WPF 应用
 ├─ tests/                  自动化测试
 ├─ artifacts/ui-audit/     UI 前后对照截图
 ├─ scripts/                构建与发布脚本
@@ -190,8 +158,6 @@ Windows 用户配置保存在：
 ```
 
 API Key 使用 Windows DPAPI 的 CurrentUser 范围加密。配置文件、API Key 和本地发布产物不会提交到 GitHub。
-
-macOS 的普通配置位于 `~/Library/Application Support/DeepSeekBalanceWidget/config.json`，API Key 不写入该文件，而是存入 macOS 登录钥匙串。
 
 本项目不会把 API Key 写入源代码、日志或 GitHub Actions。请不要把 `%APPDATA%\DeepSeekBalanceWidget\config.json` 提交或发送给其他人。
 
