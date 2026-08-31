@@ -13,7 +13,7 @@
 [![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows-0078D4)](https://github.com/wanghoufan/DeepSeekBalanceWidget)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
-![DeepSeek 余额监控 v0.4.0](artifacts/ui-audit/02-after.png)
+![DeepSeek 余额监控 v0.5.0](artifacts/ui-audit/02-after.png)
 
 ## 下载
 
@@ -21,9 +21,9 @@
 
 | 文件 | 适用平台 |
 | --- | --- |
-| `DeepSeekBalanceWidget-v0.4.0-win-x64.zip` | Windows 11 x64 |
-| `DeepSeekBalanceWidget-v0.4.0-macos-arm64.zip` | macOS Apple Silicon（M 系列） |
-| `DeepSeekBalanceWidget-v0.4.0-macos-x64.zip` | macOS Intel |
+| `DeepSeekBalanceWidget-v0.5.0-win-x64.zip` | Windows 11 x64 |
+| `DeepSeekBalanceWidget-v0.5.0-macos-arm64.zip` | macOS Apple Silicon（M 系列） |
+| `DeepSeekBalanceWidget-v0.5.0-macos-x64.zip` | macOS Intel |
 
 **Windows**：解压后直接运行 `DeepSeekBalanceWidget.exe`。发布包为 Windows x64 自包含单文件版本，目标电脑无需预先安装 .NET Runtime。
 
@@ -74,16 +74,15 @@ bash scripts/install-macos.sh arm64
 - 系统托盘/菜单栏状态、置顶、隐藏、开机自启；按北京时间显示官方峰值时段参考
 - Windows 版 API Key 使用 DPAPI CurrentUser 加密保存；macOS 版存入登录钥匙串
 
-## v0.4.0 更新亮点
+## v0.5.0 更新亮点
 
-- **ChatGPT 用量对齐表格**：双账号上下两行、五列逐列对齐，每行含剩余百分比与重置倒计时
-- **迷你胶囊单行宽布局**：DeepSeek 余额｜GPT 双账号四列对齐｜WorkBuddy 占位，贴边按钮固定最右
-- **胶囊区块顺序自定义**：设置内上移/下移调整渲染顺序，保存即生效
-
-> **开发中（未发布）**：工作区已提交但尚未打 tag 发布，包含 OpenCode Go 额度监测（替代原 WB 占位）、预警系统重构（常驻弹窗 + 循环警报声、位置可配）、设置页改版（左侧导航 + 监测项 2×2 卡片）、胶囊整改（单行宽、按钮贴最右、刷新时间右上角、OC 区块、GPT 列距收紧）与若干修复。发布时将随版本号一并更新上方下载表与徽标。详见 [CHANGELOG.md](CHANGELOG.md)「未发布」。
+- **OpenCode Go 额度监测**：接入官方用量接口 `zen/go/v1/usage`，5 小时 / 周 / 月三窗口全量展示，替代原 WorkBuddy 占位；未配置 Key / Key 无效 / 网络失败状态直接显示在区块上
+- **预警系统重构**：额度降到设定档位（默认 20% / 10%）弹常驻弹窗 + 循环警报声，需点「知道了」关闭；位置可配（右上 / 右中 / 右下）；同一档位每周期仅提醒一次，额度恢复后弹恢复通知
+- **设置页改版**：左侧标签导航 + 右侧内容（监测项 / 预警 / 界面 / 通用），监测项 2×2 卡片，统一「开关 + Key + 测试连接」行内结果显示
+- **胶囊整改**：单行宽布局，OpenCode 三窗口进度条并入，贴边 / 最小化 / 关闭按钮贴最右，刷新时间移到右上角，OC 标签跨三行垂直居中，GPT 列距收紧
 
 <details>
-<summary>查看当前界面（v0.4.0）</summary>
+<summary>查看当前界面（v0.5.0）</summary>
 
 | 迷你胶囊（单行宽布局） | 展开卡片 |
 | --- | --- |
