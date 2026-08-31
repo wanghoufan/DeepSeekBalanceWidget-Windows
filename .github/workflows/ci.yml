@@ -33,21 +33,3 @@ jobs:
 
       - name: Test
         run: dotnet test DeepSeekBalanceWidget.sln -c Release --no-build
-
-  macos-build:
-    runs-on: macos-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Restore macOS application
-        run: dotnet restore src/DeepSeekBalanceWidget.Mac/DeepSeekBalanceWidget.Mac.csproj
-
-      - name: Build macOS application
-        run: dotnet build src/DeepSeekBalanceWidget.Mac/DeepSeekBalanceWidget.Mac.csproj -c Release --no-restore

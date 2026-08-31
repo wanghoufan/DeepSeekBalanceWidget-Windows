@@ -4,24 +4,24 @@
 >
 > macOS 版已拆分到独立仓库：[DeepSeekBalanceWidget-Mac](https://github.com/wanghoufan/DeepSeekBalanceWidget-Mac)
 
-> DeepSeek 余额 & ChatGPT Plus 用量监控桌面悬浮窗 · 支持 Windows 11 与 macOS · 基于 .NET 8
+> DeepSeek 余额 & ChatGPT Plus 用量监控桌面悬浮窗 · 支持 Windows 11 · 基于 .NET 8
 >
-> _DeepSeek balance & ChatGPT Plus usage monitor — a desktop widget for Windows 11 and macOS._
+> _DeepSeek balance & ChatGPT Plus usage monitor — a desktop widget for Windows 11._
 
 一个面向 Windows 11 的 DeepSeek API 余额与 ChatGPT Plus 用量监控小工具。它支持余额轮询、Plus 剩余额度、开机自启和异常状态提示；Windows 版本另提供贴边自动隐藏、迷你胶囊和系统托盘。
 
 这是一个面向中文用户的 Windows 桌面工具，界面基于 WPF。下面的标签是 GitHub 使用的技术分类，中文含义见[标签说明](#标签说明)。
 
-[![CI](https://github.com/wanghoufan/DeepSeekBalanceWidget/actions/workflows/ci.yml/badge.svg)](https://github.com/wanghoufan/DeepSeekBalanceWidget/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/wanghoufan/DeepSeekBalanceWidget?display_name=tag)](https://github.com/wanghoufan/DeepSeekBalanceWidget/releases/latest)
-[![Platform](https://img.shields.io/badge/platform-Windows-0078D4)](https://github.com/wanghoufan/DeepSeekBalanceWidget)
+[![CI](https://github.com/wanghoufan/DeepSeekBalanceWidget-Windows/actions/workflows/ci.yml/badge.svg)](https://github.com/wanghoufan/DeepSeekBalanceWidget-Windows/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/wanghoufan/DeepSeekBalanceWidget-Windows?display_name=tag)](https://github.com/wanghoufan/DeepSeekBalanceWidget-Windows/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Windows-0078D4)](https://github.com/wanghoufan/DeepSeekBalanceWidget-Windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
 ![DeepSeek 余额监控 v0.5.0](artifacts/ui-audit/02-after.png)
 
 ## 下载
 
-前往 [Releases](https://github.com/wanghoufan/DeepSeekBalanceWidget/releases/latest) 下载对应平台的安装包：
+前往 [Releases](https://github.com/wanghoufan/DeepSeekBalanceWidget-Windows/releases/latest) 下载对应平台的安装包：
 
 | 文件 | 适用平台 |
 | --- | --- |

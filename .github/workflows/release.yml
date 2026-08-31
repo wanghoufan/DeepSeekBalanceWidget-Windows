@@ -44,42 +44,8 @@ jobs:
           name: windows-package
           path: DeepSeekBalanceWidget-*-win-x64.zip
 
-  publish-macos:
-    runs-on: macos-latest
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "8.0.x"
-
-      - name: Build macOS application
-        run: |
-          dotnet restore src/DeepSeekBalanceWidget.Mac/DeepSeekBalanceWidget.Mac.csproj
-          dotnet build src/DeepSeekBalanceWidget.Mac/DeepSeekBalanceWidget.Mac.csproj -c Release --no-restore
-
-      - name: Publish macOS arm64
-        run: bash scripts/publish-macos.sh arm64
-
-      - name: Publish macOS x64
-        run: bash scripts/publish-macos.sh x64
-
-      - name: Package macOS
-        run: |
-          ditto -c -k --keepParent release/macos-arm64/DeepSeekBalanceWidget.app "DeepSeekBalanceWidget-$GITHUB_REF_NAME-macos-arm64.zip"
-          ditto -c -k --keepParent release/macos-x64/DeepSeekBalanceWidget.app "DeepSeekBalanceWidget-$GITHUB_REF_NAME-macos-x64.zip"
-
-      - name: Upload macOS packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-packages
-          path: DeepSeekBalanceWidget-*-macos-*.zip
-
   release:
-    needs: [publish-windows, publish-macos]
+    needs: [publish-windows]
     runs-on: ubuntu-latest
 
     steps:
