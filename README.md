@@ -17,7 +17,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows-0078D4)](https://github.com/wanghoufan/DeepSeekBalanceWidget-Windows)
 [![.NET](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 
-![DeepSeek 余额监控 v0.5.0](artifacts/ui-audit/02-after.png)
+![DeepSeek 余额监控 v0.6.0](artifacts/ui-audit/02-after.png)
 
 ## 下载
 
@@ -25,7 +25,7 @@
 
 | 文件 | 适用平台 |
 | --- | --- |
-| `DeepSeekBalanceWidget-v0.5.0-win-x64.zip` | Windows 11 x64 |
+| `DeepSeekBalanceWidget-v0.6.0-win-x64.zip` | Windows 11 x64 |
 
 **Windows**：解压后直接运行 `DeepSeekBalanceWidget.exe`。发布包为 Windows x64 自包含单文件版本，目标电脑无需预先安装 .NET Runtime。
 
@@ -48,15 +48,16 @@ macOS 版已拆分到独立仓库：[DeepSeekBalanceWidget-Mac](https://github.c
 - 系统托盘/菜单栏状态、置顶、隐藏、开机自启；按北京时间显示官方峰值时段参考
 - Windows 版 API Key 使用 DPAPI CurrentUser 加密保存
 
-## v0.5.0 更新亮点
+## v0.6.0 更新亮点
 
-- **OpenCode Go 额度监测**：接入官方用量接口 `zen/go/v1/usage`，5 小时 / 周 / 月三窗口全量展示，替代原 WorkBuddy 占位；未配置 Key / Key 无效 / 网络失败状态直接显示在区块上
-- **预警系统重构**：额度降到设定档位（默认 20% / 10%）弹常驻弹窗 + 循环警报声，需点「知道了」关闭；位置可配（右上 / 右中 / 右下）；同一档位每周期仅提醒一次，额度恢复后弹恢复通知
-- **设置页改版**：左侧标签导航 + 右侧内容（监测项 / 预警 / 界面 / 通用），监测项 2×2 卡片，统一「开关 + Key + 测试连接」行内结果显示
-- **胶囊整改**：单行宽布局，OpenCode 三窗口进度条并入，贴边 / 最小化 / 关闭按钮贴最右，刷新时间移到右上角，OC 标签跨三行垂直居中，GPT 列距收紧
+- **额度恢复提醒改版**：ChatGPT 额度只要进入新周期（5h / 周窗口重置回满）就一律弹恢复提醒，不再要求本周期预警过；恢复时胶囊边框闪绿色呼吸灯，一眼区分"恢复了好消息"与"额度告急"的橙/红预警
+- **恢复弹窗与预警同级**：绿色描边 + 「知道了」按钮 + 循环提示音；OpenCode 不做恢复提醒（消耗极少）
+- **11 种柔和恢复提示音**：门铃叮咚 / 八音盒 / 清脆风铃 / 水滴 / 钢琴琶音 / 竖琴滑音 / 木琴 / 吉他拨弦 / 悠扬钟声 / 鸟鸣 / 晨光舒缓，全部程序化合成，设置页可逐个试听，与警报声风格独立配置
+- **限时时长可配置**：限时提醒从固定 10 秒改为 10 秒 / 30 秒 / 1 分钟三档
+- 右键菜单新增「测试恢复提醒」「测试额度预警」，随时手动验证提醒效果
 
 <details>
-<summary>查看当前界面（v0.5.0）</summary>
+<summary>查看当前界面（v0.6.0）</summary>
 
 | 迷你胶囊（单行宽布局） | 展开卡片 |
 | --- | --- |

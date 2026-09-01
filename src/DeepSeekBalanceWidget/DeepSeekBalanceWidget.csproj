@@ -8,9 +8,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>DeepSeekBalanceWidget</RootNamespace>
     <AssemblyName>DeepSeekBalanceWidget</AssemblyName>
-    <Version>0.5.0</Version>
-    <AssemblyVersion>0.5.0.0</AssemblyVersion>
-    <FileVersion>0.5.0.0</FileVersion>
+    <Version>0.6.0</Version>
+    <AssemblyVersion>0.6.0.0</AssemblyVersion>
+    <FileVersion>0.6.0.0</FileVersion>
     <Authors>wanghoufan</Authors>
     <Product>DeepSeek Balance Widget</Product>
     <Description>Windows desktop widget for monitoring DeepSeek API balance.</Description>
