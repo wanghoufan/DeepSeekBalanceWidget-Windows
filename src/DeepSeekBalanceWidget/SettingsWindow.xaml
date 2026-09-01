@@ -391,7 +391,7 @@
                   <RadioButton x:Name="AlertLimitedRadio" Content="限时" FontSize="13"
                                GroupName="AlertMode" Margin="0,0,10,0" VerticalAlignment="Center"/>
                   <ComboBox x:Name="AlertDurationBox" Width="90" FontSize="13"
-                            ToolTip="限时模式下提示音/弹窗的最短持续时间">
+                            ToolTip="限时模式下无人点击时，弹窗与提示音持续多久后自动消失；点「知道了」始终立即关闭">
                     <ComboBoxItem Content="10 秒" Tag="10"/>
                     <ComboBoxItem Content="30 秒" Tag="30"/>
                     <ComboBoxItem Content="1 分钟" Tag="60"/>

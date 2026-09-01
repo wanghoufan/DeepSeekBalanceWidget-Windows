@@ -22,21 +22,27 @@ public enum ToastAlertStyle
 }
 
 /// <summary>
-/// 通知/警报窗。警报模式（Alarm）：
-/// - 播放循环警报声（可选），常驻显示直到点击「知道了」（持续模式）；
-/// - 或限时模式：响满设定时长（默认 10 秒，可设 30 秒/1 分钟）后自动淡出；
+/// 通知/警报窗。警报/恢复模式（Alarm / Recovery）：
+/// - 播放循环提示音（可选），常驻显示直到点击「知道了」（持续模式）；
+/// - 或限时模式：无人点击时响满设定时长（默认 10 秒，可设 30 秒/1 分钟）后自动淡出；
+/// - 点「知道了」（或点窗体）立即停声关闭，不设响满保底；
+/// - 声音跟窗走（所有权机制）：发声窗关闭即停声，若还有其他响声窗则交棒给最新的一个，
+///   最后一个响声窗关闭后彻底静音；
 /// - 位置由设置决定（右上 / 右中 / 右下），多窗堆叠、开关时统一重排。
-/// 普通通知（Notice）：8 秒自动淡出，无按钮不响声（恢复类通知用）。
+/// 普通通知（Notice）：8 秒自动淡出，无按钮不响声。
 /// </summary>
 public partial class ToastWindow : Window
 {
     private const double NoticeSeconds = 8;
 
-    /// <summary>限时模式的最短持续时间（秒），由设置决定（10/30/60），也用于「点了知道了至少响满」的保底。</summary>
+    /// <summary>限时模式的自动关闭时长（秒），由设置决定（10/30/60）；点「知道了」会立即关闭，不受此限制。</summary>
     private readonly double _minSeconds;
 
     /// <summary>当前活动的通知窗（含普通与警报），用于统一堆叠定位与警报声计数。</summary>
     private static readonly List<ToastWindow> Active = new();
+
+    /// <summary>当前正在发声的窗口（声音所有权）：新发声窗接管，关闭时由它停声并交棒。</summary>
+    private static ToastWindow? _soundOwner;
 
     private readonly ToastAlertStyle _style;
     private readonly bool _sound;
@@ -45,7 +51,7 @@ public partial class ToastWindow : Window
     private readonly bool _persistent;
     private readonly DispatcherTimer? _autoCloseTimer;
     private bool _dismissed;
-    private DateTime _shownUtc = DateTime.UtcNow;
+    private bool _closing;
 
     public ToastWindow(
         string title,
@@ -106,18 +112,11 @@ public partial class ToastWindow : Window
 
         Loaded += (_, _) =>
         {
-            _shownUtc = DateTime.UtcNow;
             lock (Active)
             {
                 Active.Add(this);
                 RepositionAll();
-            }
-            if (_sound)
-            {
-                if (_style == ToastAlertStyle.Recovery)
-                    RecoverySound.Play(_soundStyle);
-                else
-                    AlarmSound.Play(_soundStyle);
+                if (_sound) PlayOwnSoundUnsafe();
             }
             Opacity = 0;
             var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromSeconds(0.25));
@@ -129,9 +128,34 @@ public partial class ToastWindow : Window
             {
                 Active.Remove(this);
                 if (!App.IsShuttingDown) RepositionAll();
+
+                // 声音跟窗走：发声窗自己关掉就立即停声；
+                // 若还有其他响声窗在，把发声权交给最新的那个（重放它的音色）。
+                if (_soundOwner == this)
+                {
+                    _soundOwner = null;
+                    AlarmSound.Stop();
+                    RecoverySound.Stop();
+                    Active.LastOrDefault(w => w._sound)?.PlayOwnSoundUnsafe();
+                }
             }
-            StopAlarmSoundIfLast();
         };
+    }
+
+    /// <summary>接管发声权并播放本窗的提示音（须在 lock(Active) 内调用）。</summary>
+    private void PlayOwnSoundUnsafe()
+    {
+        _soundOwner = this;
+        if (_style == ToastAlertStyle.Recovery)
+        {
+            AlarmSound.Stop(); // 先停另一种循环音，避免两种声音叠着响
+            RecoverySound.Play(_soundStyle);
+        }
+        else
+        {
+            RecoverySound.Stop();
+            AlarmSound.Play(_soundStyle);
+        }
     }
 
     private void Window_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -146,36 +170,19 @@ public partial class ToastWindow : Window
     {
         if (_dismissed) return;
         _dismissed = true;
-        // 保底：警报/恢复提示音至少持续设定时长，即便用户立刻点掉
-        double elapsed = (DateTime.UtcNow - _shownUtc).TotalSeconds;
-        if (_style != ToastAlertStyle.Notice && elapsed < _minSeconds && !_persistent)
-        {
-            _autoCloseTimer!.Stop();
-            _autoCloseTimer.Interval = TimeSpan.FromSeconds(_minSeconds - elapsed);
-            _autoCloseTimer.Tick += (_, _) => FadeOutAndClose();
-            _autoCloseTimer.Start();
-            return;
-        }
+        // 点「知道了」（或点窗体）立即停声并关闭——不设"至少响满"保底，
+        // 保底曾导致限时时长设 1 分钟时点掉后仍继续响近一分钟（用户反馈）。
         FadeOutAndClose();
     }
 
     private void FadeOutAndClose()
     {
+        if (_closing) return;
+        _closing = true;
         _autoCloseTimer?.Stop();
         var fadeOut = new DoubleAnimation(1, 0, TimeSpan.FromSeconds(0.25));
         fadeOut.Completed += (_, _) => Close();
         BeginAnimation(OpacityProperty, fadeOut);
-    }
-
-    private void StopAlarmSoundIfLast()
-    {
-        bool soundActive;
-        lock (Active) soundActive = Active.Exists(w => w._sound);
-        if (!soundActive)
-        {
-            AlarmSound.Stop();
-            RecoverySound.Stop();
-        }
     }
 
     /// <summary>按设置的锚点位置堆叠全部活动通知窗。</summary>

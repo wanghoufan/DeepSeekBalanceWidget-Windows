@@ -25,7 +25,7 @@
 
 | 文件 | 适用平台 |
 | --- | --- |
-| `DeepSeekBalanceWidget-v0.6.0-win-x64.zip` | Windows 11 x64 |
+| `DeepSeekBalanceWidget-v0.6.1-win-x64.zip` | Windows 11 x64 |
 
 **Windows**：解压后直接运行 `DeepSeekBalanceWidget.exe`。发布包为 Windows x64 自包含单文件版本，目标电脑无需预先安装 .NET Runtime。
 
