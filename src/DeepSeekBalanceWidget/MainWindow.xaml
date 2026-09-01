@@ -49,6 +49,8 @@
       <MenuItem Header="立即刷新" Click="RefreshMenu_Click"/>
       <MenuItem Header="设置..." Click="SettingsMenu_Click"/>
       <MenuItem Header="恢复默认位置" Click="ResetPositionMenu_Click"/>
+      <MenuItem Header="测试恢复提醒（绿色边框）" Click="TestRecoveryAlertMenu_Click"/>
+      <MenuItem Header="测试额度预警（警报样式）" Click="TestLowAlertMenu_Click"/>
       <Separator/>
       <MenuItem Header="退出" Click="ExitMenu_Click"/>
     </ContextMenu>

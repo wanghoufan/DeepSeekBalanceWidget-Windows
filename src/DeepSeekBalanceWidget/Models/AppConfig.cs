@@ -37,8 +37,14 @@ public sealed class AppConfig
     /// <summary>警报声风格：Soft 柔和 / Standard 标准 / Urgent 急促。</summary>
     public string AlertSoundStyle { get; set; } = "Standard";
 
+    /// <summary>恢复提示音风格（额度恢复提醒专用，柔和系 11 选 1，见 RecoverySound.Styles）。</summary>
+    public string RecoveryAlertSoundStyle { get; set; } = "Chime";
+
     /// <summary>警报模式：Continuous=持续直到点「知道了」；Limited=限时（至少 10 秒）。</summary>
     public string AlertMode { get; set; } = "Continuous";
+
+    /// <summary>限时提醒的最短持续时间（秒）：10 / 30 / 60。持续模式不受影响（点「知道了」才停）。</summary>
+    public int AlertMinDurationSeconds { get; set; } = 10;
 
     /// <summary>警报窗位置：TopRight / RightCenter / BottomRight。</summary>
     public string AlertPosition { get; set; } = "TopRight";

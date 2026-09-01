@@ -8,7 +8,8 @@ namespace DeepSeekBalanceWidget.Tests;
 public class CodexQuotaAlertEvaluatorTests
 {
     private static readonly DateTimeOffset Now = new(2026, 8, 29, 10, 0, 0, TimeSpan.Zero);
-    private static readonly DateTimeOffset ResetsAt = Now.AddHours(3);
+    private static readonly DateTimeOffset Cycle1Reset = Now.AddHours(3);
+    private static readonly DateTimeOffset Cycle2Reset = Cycle1Reset.AddHours(5);
 
     private const int FiveHourMinutes = 300;
     private const int WeeklyMinutes = 10080;
@@ -101,11 +102,11 @@ public class CodexQuotaAlertEvaluatorTests
         var evaluator = new CodexQuotaAlertEvaluator();
         var cfg = Cfg();
 
-        evaluator.Evaluate(new[] { Account("a", Win(80, FiveHourMinutes)) }, cfg, Now);
-        evaluator.Evaluate(new[] { Account("a", Win(5, FiveHourMinutes)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(80, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(5, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
 
         var alert = Assert.Single(evaluator.Evaluate(
-            new[] { Account("a", Win(100, FiveHourMinutes, ResetsAt)) }, cfg, Now));
+            new[] { Account("a", Win(100, FiveHourMinutes, Cycle2Reset)) }, cfg, Now));
         Assert.True(alert.IsRecovery);
         Assert.Null(alert.Threshold);
         Assert.Equal("5 小时额度", alert.WindowLabel);
@@ -113,21 +114,51 @@ public class CodexQuotaAlertEvaluatorTests
 
         // 恢复后提醒记录已清空，下一个周期可以重新预警。
         var again = Assert.Single(evaluator.Evaluate(
-            new[] { Account("a", Win(18, FiveHourMinutes, ResetsAt)) }, cfg, Now));
+            new[] { Account("a", Win(18, FiveHourMinutes, Cycle2Reset)) }, cfg, Now));
         Assert.Equal(20, again.Threshold);
     }
 
     [Fact]
-    public void ResetWhilePlenty_DoesNotAnnounceRecovery()
+    public void ResetToFull_AlwaysAnnouncesRecovery()
     {
         var evaluator = new CodexQuotaAlertEvaluator();
         var cfg = Cfg();
 
-        evaluator.Evaluate(new[] { Account("a", Win(60, FiveHourMinutes)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(60, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
 
-        // 本就充足时被重置回 100%，不应打扰用户。
+        // 用户要求：只要额度恢复（重置回满）都要提醒，即使本周期从未跌破档位。
+        var alert = Assert.Single(evaluator.Evaluate(
+            new[] { Account("a", Win(100, FiveHourMinutes, Cycle2Reset)) }, cfg, Now));
+        Assert.True(alert.IsRecovery);
+        Assert.Equal(100, alert.RemainingPercent);
+    }
+
+    [Fact]
+    public void SameCycleRebound_DoesNotAnnounceRecovery()
+    {
+        var evaluator = new CodexQuotaAlertEvaluator();
+        var cfg = Cfg();
+
+        evaluator.Evaluate(new[] { Account("a", Win(60, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
+
+        // ResetsAt 未前进（同一周期内数据回弹到 100%）不算恢复，不打扰用户。
         Assert.Empty(evaluator.Evaluate(
-            new[] { Account("a", Win(100, FiveHourMinutes, ResetsAt)) }, cfg, Now));
+            new[] { Account("a", Win(100, FiveHourMinutes, Cycle1Reset)) }, cfg, Now));
+    }
+
+    [Fact]
+    public void ResetsAtJitter_WithinTolerance_NotTreatedAsNewCycle()
+    {
+        var evaluator = new CodexQuotaAlertEvaluator();
+        var cfg = Cfg();
+
+        evaluator.Evaluate(new[] { Account("a", Win(60, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(5, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
+
+        // ResetsAt 只前进 30 秒（小于 1 分钟抖动容忍窗口）：不视为新周期，
+        // 既不播报恢复，也不清空档位记录。
+        Assert.Empty(evaluator.Evaluate(
+            new[] { Account("a", Win(100, FiveHourMinutes, Cycle1Reset.AddSeconds(30))) }, cfg, Now));
     }
 
     [Fact]
@@ -205,15 +236,15 @@ public class CodexQuotaAlertEvaluatorTests
         cfg.CodexQuotaAlertCooldownSeconds = 300;
         var evaluator = new CodexQuotaAlertEvaluator();
 
-        evaluator.Evaluate(new[] { Account("a", Win(80, FiveHourMinutes)) }, cfg, Now);
-        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(80, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
         Assert.Single(evaluator.Evaluate(
-            new[] { Account("a", Win(100, FiveHourMinutes, ResetsAt)) }, cfg, Now));
+            new[] { Account("a", Win(100, FiveHourMinutes, Cycle2Reset)) }, cfg, Now));
 
         // 冷却期内又走完一轮「下滑 → 恢复」，恢复播报应被冷却吸收，避免反复打扰。
-        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes, ResetsAt)) }, cfg, Now.AddSeconds(30));
+        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes, Cycle2Reset)) }, cfg, Now.AddSeconds(30));
         Assert.Empty(evaluator.Evaluate(
-            new[] { Account("a", Win(100, FiveHourMinutes, ResetsAt)) }, cfg, Now.AddSeconds(60)));
+            new[] { Account("a", Win(100, FiveHourMinutes, Cycle2Reset)) }, cfg, Now.AddSeconds(60)));
     }
 
     [Fact]
@@ -223,37 +254,14 @@ public class CodexQuotaAlertEvaluatorTests
         cfg.CodexQuotaAlertCooldownSeconds = 3600;
         var evaluator = new CodexQuotaAlertEvaluator();
 
-        evaluator.Evaluate(new[] { Account("a", Win(80, FiveHourMinutes)) }, cfg, Now);
-        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes)) }, cfg, Now);
-        evaluator.Evaluate(new[] { Account("a", Win(100, FiveHourMinutes, ResetsAt)) }, cfg, Now);
-        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes, ResetsAt)) }, cfg, Now.AddMinutes(1));
+        evaluator.Evaluate(new[] { Account("a", Win(80, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes, Cycle1Reset)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(100, FiveHourMinutes, Cycle2Reset)) }, cfg, Now);
+        evaluator.Evaluate(new[] { Account("a", Win(15, FiveHourMinutes, Cycle2Reset)) }, cfg, Now.AddMinutes(1));
 
         // 恢复冷却只约束恢复播报；额度继续下滑到更低档位时，预警必须照常发出。
         var alert = Assert.Single(evaluator.Evaluate(
-            new[] { Account("a", Win(8, FiveHourMinutes, ResetsAt)) }, cfg, Now.AddMinutes(2)));
+            new[] { Account("a", Win(8, FiveHourMinutes, Cycle2Reset)) }, cfg, Now.AddMinutes(2)));
         Assert.Equal(10, alert.Threshold);
-    }
-
-    [Fact]
-    public void Recovery_WinsOverLowAlert_WhenThresholdAboveRecoveredPercent()
-    {
-        // 用户把阈值设得比恢复线还高时的防御：同一刷新内只播报恢复，不弹自相矛盾的“仅剩”。
-        var cfg = Cfg();
-        cfg.CodexQuotaAlertThresholds = new List<int> { 99 };
-        cfg.CodexQuotaRecoveredPercent = 95;
-        cfg.CodexQuotaAlertCooldownSeconds = 0;
-        var evaluator = new CodexQuotaAlertEvaluator();
-
-        evaluator.Evaluate(new[] { Account("a", Win(98, FiveHourMinutes)) }, cfg, Now);
-
-        var low = Assert.Single(evaluator.Evaluate(
-            new[] { Account("a", Win(98, FiveHourMinutes)) }, cfg, Now));
-        Assert.False(low.IsRecovery);
-        Assert.Equal(99, low.Threshold);
-
-        var recovery = Assert.Single(evaluator.Evaluate(
-            new[] { Account("a", Win(98, FiveHourMinutes)) }, cfg, Now.AddMinutes(1)));
-        Assert.True(recovery.IsRecovery);
-        Assert.Equal(98, recovery.RemainingPercent);
     }
 }

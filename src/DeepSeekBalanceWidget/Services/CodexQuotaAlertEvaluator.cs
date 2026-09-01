@@ -20,6 +20,9 @@ public sealed class CodexQuotaAlertEvaluator
     /// <summary>窗口时长不超过该分钟数视为 5 小时窗口，否则视为周窗口。</summary>
     private const int FiveHourWindowMaxMinutes = 360;
 
+    /// <summary>ResetsAt 前进超过该时长才算进入新周期；小于该值视为 API 时间戳抖动。</summary>
+    internal static readonly TimeSpan CycleJitterTolerance = TimeSpan.FromMinutes(1);
+
     private readonly Dictionary<string, CodexQuotaWindowState> _states = new();
 
     /// <summary>评估所有账号的额度窗口，返回本次需要提醒的事件（可能为空）。</summary>
@@ -75,21 +78,23 @@ public sealed class CodexQuotaAlertEvaluator
             return;
         }
 
-        // 恢复播报的前置条件是「本周期确实预警过」，即额度真的被消耗到档位以下。
-        // 若只看"上次剩余低于恢复阈值"，额度本就充足（如 60%）时单纯因周期重置也会误报。
-        // 同时必须在「真正进入新周期」（ResetsAt 变化）时才清空 NotifiedThresholds，
-        // 否则数据短暂回弹到 95% 就会误清空，导致 13% 这种低位档位被反复弹出。
-        bool isNewCycle = !state.LastResetsAt.HasValue
-                          || !window.ResetsAt.HasValue
-                          || window.ResetsAt.Value > state.LastResetsAt.Value;
-        bool recovered = state.NotifiedThresholds.Count > 0 && remaining >= recoveredAt;
-        if (recovered && isNewCycle && IsOutsideRecoveryCooldown(state, now, cooldown))
+        // 恢复播报语义（2026-08-31 调整）：只要额度窗口真正进入新周期（ResetsAt 前进、
+        // 额度重置回满），就一律播报「已恢复」，不再要求本周期先预警过——
+        // 用户要求「5 小时 / 周额度只要恢复了都要提醒」。
+        // ResetsAt 必须严格前进超过抖动容忍窗口才算新周期，防止 API 时间戳毫秒级抖动
+        // 误清空档位记录，导致 13% 这种低位档位被反复弹出。
+        bool isNewCycle = window.ResetsAt.HasValue
+                          && state.LastResetsAt.HasValue
+                          && window.ResetsAt.Value - state.LastResetsAt.Value > CycleJitterTolerance;
+        if (isNewCycle) state.ResetCycle();
+
+        bool recovered = isNewCycle && remaining >= recoveredAt;
+        if (recovered && IsOutsideRecoveryCooldown(state, now, cooldown))
         {
             alerts.Add(new CodexQuotaAlert(
                 account.AccountId, account.Email, kind, LabelOf(kind),
                 remaining, null, IsRecovery: true, window.ResetsAt));
             state.LastRecoveryAlertUtc = now;
-            state.ResetCycle();
             state.LastRemainingPercent = remaining;
             state.LastResetsAt = window.ResetsAt;
 

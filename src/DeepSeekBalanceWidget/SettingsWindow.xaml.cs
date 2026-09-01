@@ -64,9 +64,17 @@ public partial class SettingsWindow : Window
             "Urgent" => 2,
             _ => 1
         };
+        RecoverySoundStyleBox.SelectedIndex = Math.Max(0,
+            Array.IndexOf(RecoverySound.Styles, cfg.RecoveryAlertSoundStyle));
         (cfg.AlertMode.Equals("Limited", StringComparison.OrdinalIgnoreCase)
             ? AlertLimitedRadio
             : AlertContinuousRadio).IsChecked = true;
+        AlertDurationBox.SelectedIndex = cfg.AlertMinDurationSeconds switch
+        {
+            30 => 1,
+            60 => 2,
+            _ => 0
+        };
         AlertPositionBox.SelectedIndex = cfg.AlertPosition switch
         {
             "RightCenter" => 1,
@@ -221,6 +229,27 @@ public partial class SettingsWindow : Window
         stop.Start();
     }
 
+    private void TestRecoverySound_Click(object sender, RoutedEventArgs e)
+    {
+        if (AlertSoundCheck.IsChecked != true)
+        {
+            SetTestResult(OcTestResult, false, "提示音已关闭，请先勾选「播放警报声」");
+            return;
+        }
+        TestRecoverySoundBtn.IsEnabled = false;
+        string style = (RecoverySoundStyleBox.SelectedItem as System.Windows.Controls.ComboBoxItem)
+            ?.Tag?.ToString() ?? RecoverySound.DefaultStyle;
+        RecoverySound.Play(style);
+        var stop = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        stop.Tick += (_, _) =>
+        {
+            stop.Stop();
+            RecoverySound.Stop();
+            TestRecoverySoundBtn.IsEnabled = true;
+        };
+        stop.Start();
+    }
+
     /// <summary>后台线程执行测试，按钮置灰防连点，结果写回对应状态行。</summary>
     private async Task RunTestAsync(
         System.Windows.Controls.Button button,
@@ -334,7 +363,16 @@ public partial class SettingsWindow : Window
         _cfg.AlertSoundEnabled = AlertSoundCheck.IsChecked == true;
         _cfg.AlertSoundStyle = (AlertSoundStyleBox.SelectedItem as System.Windows.Controls.ComboBoxItem)
                 ?.Tag?.ToString() ?? "Standard";
+        _cfg.RecoveryAlertSoundStyle = (RecoverySoundStyleBox.SelectedItem as System.Windows.Controls.ComboBoxItem)
+                ?.Tag?.ToString() ?? RecoverySound.DefaultStyle;
         _cfg.AlertMode = AlertLimitedRadio.IsChecked == true ? "Limited" : "Continuous";
+        _cfg.AlertMinDurationSeconds = (AlertDurationBox.SelectedItem as System.Windows.Controls.ComboBoxItem)
+                ?.Tag?.ToString() switch
+        {
+            "30" => 30,
+            "60" => 60,
+            _ => 10
+        };
         _cfg.AlertPosition = (AlertPositionBox.SelectedItem as System.Windows.Controls.ComboBoxItem)
                 ?.Tag?.ToString() ?? "TopRight";
 

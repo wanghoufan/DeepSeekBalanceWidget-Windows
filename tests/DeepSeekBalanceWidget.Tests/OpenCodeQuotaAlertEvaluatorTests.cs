@@ -9,10 +9,12 @@ namespace DeepSeekBalanceWidget.Tests;
 
 /// <summary>
 /// OpenCode 额度预警判定测试：档位与 GPT 共用配置，
-/// 三窗口（5h/周/月）独立跟踪，遵循「基线 / 预警过才报恢复 / 档位去重」规则。
+/// 三窗口（5h/周/月）独立跟踪，遵循「基线 / 不播报恢复 / 新周期重新武装档位」规则。
 /// </summary>
 public class OpenCodeQuotaAlertEvaluatorTests
 {
+    private static readonly DateTimeOffset BaseNow = new(2026, 8, 29, 10, 0, 0, TimeSpan.Zero);
+
     private static AppConfig Config() => new()
     {
         EnableCodexQuotaAlerts = true,
@@ -25,7 +27,14 @@ public class OpenCodeQuotaAlertEvaluatorTests
         => new(true, null,
             windows.Select(w => new OpenCodeUsageWindow(
                 w.kind, 100 - w.remaining, w.remaining,
-                DateTimeOffset.Now.AddHours(2))).ToArray());
+                BaseNow.AddHours(2))).ToArray());
+
+    /// <summary>与 Snapshot 相同但 ResetsAt 前进 5 小时，模拟进入新周期。</summary>
+    private static OpenCodeUsageSnapshot NextCycleSnapshot(params (string kind, int remaining)[] windows)
+        => new(true, null,
+            windows.Select(w => new OpenCodeUsageWindow(
+                w.kind, 100 - w.remaining, w.remaining,
+                BaseNow.AddHours(7))).ToArray());
 
     private readonly OpenCodeQuotaAlertEvaluator _evaluator = new();
 
@@ -71,25 +80,19 @@ public class OpenCodeQuotaAlertEvaluatorTests
     }
 
     [Fact]
-    public void Recovery_RequiresPriorAlert_AndResetsCycle()
+    public void Recovery_NotAnnounced_AndCycleResetRearmsAlerts()
     {
         var cfg = Config();
-        var now = DateTimeOffset.Now;
 
-        _evaluator.Evaluate(Snapshot(("rolling", 60)), cfg, now); // 基线
+        _evaluator.Evaluate(Snapshot(("rolling", 60)), cfg, BaseNow); // 基线
 
-        // 未预警过就回到高位：不报恢复（避免周期重置误报）
-        Assert.Empty(_evaluator.Evaluate(Snapshot(("rolling", 97)), cfg, now.AddMinutes(1)));
+        // 用户要求：OpenCode 不做恢复提醒——即使进入新周期、额度重置回满也不播报。
+        Assert.Empty(_evaluator.Evaluate(NextCycleSnapshot(("rolling", 100)), cfg, BaseNow.AddMinutes(1)));
 
-        // 真正耗尽过 → 恢复才播报
-        _evaluator.Evaluate(Snapshot(("rolling", 20)), cfg, now.AddMinutes(2));
-        var recovered = _evaluator.Evaluate(Snapshot(("rolling", 97)), cfg, now.AddMinutes(3));
-        Assert.Single(recovered);
-        Assert.True(recovered[0].IsRecovery);
-
-        // 恢复后进入新周期：再次跌破可重新预警
-        var reAlert = _evaluator.Evaluate(Snapshot(("rolling", 15)), cfg, now.AddMinutes(4));
+        // 但新周期已清空档位记录，随后跌破档位时低量预警可重新触发。
+        var reAlert = _evaluator.Evaluate(Snapshot(("rolling", 15)), cfg, BaseNow.AddMinutes(2));
         Assert.Single(reAlert);
+        Assert.False(reAlert[0].IsRecovery);
         Assert.Equal(20, reAlert[0].Threshold);
     }
 

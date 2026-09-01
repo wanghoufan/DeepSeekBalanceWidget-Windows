@@ -345,7 +345,7 @@
             <Border Style="{StaticResource Card}" Margin="0,0,0,14">
               <StackPanel>
                 <TextBlock Style="{StaticResource SectionTitle}" Text="预警行为"/>
-                <CheckBox x:Name="AlertSoundCheck" Content="播放警报声（低余额 / 额度预警）" FontSize="13" Margin="0,0,0,10"/>
+                <CheckBox x:Name="AlertSoundCheck" Content="播放警报声（低余额 / 额度预警 / 恢复提醒）" FontSize="13" Margin="0,0,0,10"/>
                 <Grid Margin="0,0,0,10">
                   <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -361,11 +361,41 @@
                   <Button x:Name="TestAlarmBtn" Grid.Column="2" Content="试听" Style="{StaticResource SecondaryButton}"
                           Width="56" Margin="10,0,0,0" Click="TestAlarm_Click" ToolTip="播放 3 秒警报声试听"/>
                 </Grid>
+                <Grid Margin="0,0,0,10">
+                  <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                  </Grid.ColumnDefinitions>
+                  <TextBlock Text="恢复提示音" FontSize="13" VerticalAlignment="Center" Margin="0,0,12,0"
+                             ToolTip="额度恢复提醒专用提示音，11 种柔和音色可选，可与警报声设置成不同风格"/>
+                  <ComboBox x:Name="RecoverySoundStyleBox" Grid.Column="1">
+                    <ComboBoxItem Content="门铃叮咚（默认）" Tag="Chime"/>
+                    <ComboBoxItem Content="八音盒" Tag="MusicBox"/>
+                    <ComboBoxItem Content="清脆风铃" Tag="WindChime"/>
+                    <ComboBoxItem Content="水滴" Tag="WaterDrop"/>
+                    <ComboBoxItem Content="钢琴琶音" Tag="PianoArp"/>
+                    <ComboBoxItem Content="竖琴滑音" Tag="HarpGliss"/>
+                    <ComboBoxItem Content="木琴" Tag="Xylophone"/>
+                    <ComboBoxItem Content="吉他拨弦" Tag="Guitar"/>
+                    <ComboBoxItem Content="悠扬钟声" Tag="Bell"/>
+                    <ComboBoxItem Content="鸟鸣" Tag="BirdChirp"/>
+                    <ComboBoxItem Content="晨光舒缓" Tag="SunrisePad"/>
+                  </ComboBox>
+                  <Button x:Name="TestRecoverySoundBtn" Grid.Column="2" Content="试听" Style="{StaticResource SecondaryButton}"
+                          Width="56" Margin="10,0,0,0" Click="TestRecoverySound_Click" ToolTip="播放 3 秒恢复提示音试听"/>
+                </Grid>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                   <RadioButton x:Name="AlertContinuousRadio" Content="持续报警（点击「知道了」停止）" FontSize="13"
                                GroupName="AlertMode" Margin="0,0,20,0" VerticalAlignment="Center"/>
-                  <RadioButton x:Name="AlertLimitedRadio" Content="限时（≥10 秒）" FontSize="13"
-                               GroupName="AlertMode" VerticalAlignment="Center"/>
+                  <RadioButton x:Name="AlertLimitedRadio" Content="限时" FontSize="13"
+                               GroupName="AlertMode" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                  <ComboBox x:Name="AlertDurationBox" Width="90" FontSize="13"
+                            ToolTip="限时模式下提示音/弹窗的最短持续时间">
+                    <ComboBoxItem Content="10 秒" Tag="10"/>
+                    <ComboBoxItem Content="30 秒" Tag="30"/>
+                    <ComboBoxItem Content="1 分钟" Tag="60"/>
+                  </ComboBox>
                 </StackPanel>
                 <Grid>
                   <Grid.ColumnDefinitions>

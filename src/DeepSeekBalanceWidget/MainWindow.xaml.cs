@@ -436,6 +436,30 @@ public partial class MainWindow : Window
     private void ResetPositionMenu_Click(object sender, RoutedEventArgs e) => ResetPosition();
     private void ExitMenu_Click(object sender, RoutedEventArgs e) => ExitApp();
 
+    /// <summary>菜单「测试恢复提醒」：手动触发一次绿色呼吸边框 + 恢复样式弹窗（含提示音），便于验证视觉效果。</summary>
+    private void TestRecoveryAlertMenu_Click(object sender, RoutedEventArgs e)
+    {
+        FlashRecoveryGlow();
+        if (_cfg.ShowToastNotifications)
+        {
+            ToastService.Show(this,
+                "测试 · 5 小时额度已恢复",
+                "额度已重置回 100%（这是一次手动测试弹窗）", _cfg, ToastAlertStyle.Recovery);
+        }
+    }
+
+    /// <summary>菜单「测试额度预警」：手动弹一次低量预警样式（警报声 + 常驻），便于与恢复提醒对比。</summary>
+    private void TestLowAlertMenu_Click(object sender, RoutedEventArgs e)
+    {
+        if (_cfg.ShowToastNotifications)
+        {
+            ToastService.Show(this,
+                "测试 · 5 小时额度仅剩 13%",
+                "预计 09-01 18:00 恢复，建议提前做好上下文交接（手动测试弹窗）",
+                _cfg, ToastAlertStyle.Alarm);
+        }
+    }
+
     public void RefreshNow() => _ = RefreshNowAsync();
 
     private async Task RefreshNowAsync()
@@ -787,21 +811,13 @@ public partial class MainWindow : Window
         bar.Background = new SolidColorBrush(color);
     }
 
-    /// <summary>评估 OpenCode 额度预警并弹窗：低量走警报（响声+常驻），恢复走普通通知。</summary>
+    /// <summary>评估 OpenCode 额度预警并弹窗：只做低量预警（响声+常驻），不做恢复提醒。</summary>
     private void RaiseOpenCodeQuotaAlerts(OpenCodeUsageSnapshot snapshot)
     {
         if (!_cfg.ShowToastNotifications) return;
 
         foreach (var alert in _openCodeQuotaAlerts.Evaluate(snapshot, _cfg, DateTimeOffset.Now))
         {
-            if (alert.IsRecovery)
-            {
-                ToastService.Show(this,
-                    $"OpenCode · {alert.WindowLabel}已恢复",
-                    $"剩余额度已回到 {alert.RemainingPercent}%", _cfg);
-                continue;
-            }
-
             string usedHint = alert.EstimatedUsedUsd.HasValue
                 ? $"（已用 ≈ ${alert.EstimatedUsedUsd.Value:0.##}）"
                 : string.Empty;
@@ -915,13 +931,12 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// 评估 ChatGPT 额度预警并弹窗：剩余额度降到阈值档位时预警，额度恢复时通知。
+    /// 评估 ChatGPT 额度预警并弹窗：剩余额度降到阈值档位时预警，额度恢复（进入新周期、
+    /// 重置回满）时一律通知，并让胶囊边框闪绿色呼吸灯以示区别（低量预警是橙色/红色调）。
     /// 文案会区分 5 小时额度 / 周额度，并写明具体账号。
     /// </summary>
     private void RaiseCodexQuotaAlerts(IReadOnlyList<CodexAccountUsageSnapshot> accounts)
     {
-        if (!_cfg.ShowToastNotifications) return;
-
         foreach (var alert in _codexQuotaAlerts.Evaluate(accounts, _cfg, DateTimeOffset.Now))
         {
             string who = ShortAccountName(alert.Email);
@@ -929,11 +944,16 @@ public partial class MainWindow : Window
 
             if (alert.IsRecovery)
             {
+                // 绿色呼吸边框是恢复提醒的主视觉，即使关闭弹窗通知也保留。
+                FlashRecoveryGlow();
+                if (!_cfg.ShowToastNotifications) continue;
                 ToastService.Show(this,
                     $"{who} · {what}已恢复",
-                    $"剩余额度已回到 {alert.RemainingPercent}%", _cfg);
+                    $"额度已重置回 {alert.RemainingPercent}%", _cfg, ToastAlertStyle.Recovery);
                 continue;
             }
+
+            if (!_cfg.ShowToastNotifications) continue;
 
             string resetHint = alert.ResetsAt is DateTimeOffset resetsAt
                 ? $"预计 {resetsAt.ToLocalTime():MM-dd HH:mm} 恢复"
@@ -943,6 +963,38 @@ public partial class MainWindow : Window
                 $"{resetHint}，建议提前做好上下文交接",
                 _cfg, ToastAlertStyle.Alarm);
         }
+    }
+
+    /// <summary>恢复提醒绿色呼吸边框：暗绿 ↔ 亮绿往复 6 次（约 6 秒）后恢复原玻璃边框。</summary>
+    private void FlashRecoveryGlow()
+    {
+        var brush = new SolidColorBrush(Color.FromRgb(0x2E, 0xB8, 0x72));
+        var anim = new ColorAnimation
+        {
+            From = Color.FromRgb(0x1D, 0x7A, 0x46),
+            To = Color.FromRgb(0x53, 0xF0, 0x8C),
+            Duration = TimeSpan.FromMilliseconds(500),
+            AutoReverse = true,
+            RepeatBehavior = new RepeatBehavior(6)
+        };
+        anim.Completed += (_, _) => RestoreCardBorders();
+        brush.BeginAnimation(SolidColorBrush.ColorProperty, anim);
+
+        Card.BorderBrush = brush;
+        Card.BorderThickness = new Thickness(2);
+        MiniCard.BorderBrush = brush;
+        MiniCard.BorderThickness = new Thickness(2);
+    }
+
+    private void RestoreCardBorders()
+    {
+        if (TryFindResource("GlassBorderBrush") is System.Windows.Media.Brush glass)
+        {
+            Card.BorderBrush = glass;
+            MiniCard.BorderBrush = glass;
+        }
+        Card.BorderThickness = new Thickness(1);
+        MiniCard.BorderThickness = new Thickness(1);
     }
 
     private void ApplyCodexAccount(
